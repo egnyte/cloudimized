@@ -1,0 +1,89 @@
+services:
+  - serviceName: compute
+    version: v1
+    queries:
+      - resource: networks
+        gcp_api_call: networks.list
+        gcp_function_args:
+          project: <PROJECT_ID>
+        gcp_log_resource_type: gce_network
+        field_exclude_filter:
+          - peerings:
+              - stateDetails
+        item_exclude_filter:
+          - peerings:
+              name: "servicenetworking-googleapis-com"
+      - resource: subnetworks
+        gcp_api_call: subnetworks.aggregatedList
+        gcp_function_args:
+          project: <PROJECT_ID>
+        gcp_log_resource_type: gce_subnetwork
+      - resource: privateServicesAccessRanges
+        gcp_api_call: globalAddresses.list
+        gcp_function_args:
+          project: <PROJECT_ID>
+          filter: purpose=VPC_PEERING
+        gcp_log_resource_type: gce_reserved_address
+      - resource: firewalls
+        gcp_api_call: firewalls.list
+        gcp_function_args:
+          project: <PROJECT_ID>
+        gcp_log_resource_type: gce_firewall_rule
+        item_exclude_filter:
+          - name: "^k8s.*"
+            description: '^{"kubernetes.io/'
+      - resource: routes
+        gcp_api_call: routes.list
+        gcp_function_args:
+          project: <PROJECT_ID>
+        gcp_log_resource_type: gce_route
+        item_exclude_filter:
+          - name: ".*(peering|default)-route.*"
+          - description: "k8s-node-route"
+        field_exclude_filter:
+          - warnings
+      - resource: vpnTunnels
+        gcp_api_call: vpnTunnels.aggregatedList
+        gcp_function_args:
+          project: <PROJECT_ID>
+        gcp_log_resource_type: vpn_tunnel
+        field_exclude_filter:
+          - sharedSecretHash
+          - sharedSecret
+          - status
+          - detailedStatus
+  - serviceName: container
+    version: v1
+    queries:
+      - resource: k8s
+        gcp_api_call: projects.locations.clusters.list
+        gcp_function_args:
+          parent: projects/<PROJECT_ID>/locations/-
+        gcp_log_resource_type: gke_cluster
+        items: clusters
+        field_exclude_filter:
+          - currentNodeCount
+          - status
+          - nodePools:
+              - status
+git:
+  remote_url: https://github.com/<ORG>/<REPO_NAME>
+  local_directory: gcp_config
+discover_projects: True
+#project_list:
+#  - my-project-ID
+excluded_projects:
+  - excluded-project-ID
+change_processor:
+  scan_interval: 30
+  service_account_regex: '^(my-terraform-sa-|\d+@|service-\d+).*'
+  ticket_regex: "^.*?([a-zA-z]{2,3}[-_][0-9]+).*"
+  ticket_sys_url:  "https://my-tickets.com/list"
+  slack:
+    channelID: "C123456789A"
+    repoCommitURL: "https://github.com/<ORG>/<REPO_NAME>/commit"
+  terraform:
+    url: "https://app.terraform.io"
+    service_workspace_map:
+      org: my-organization
+      workspace: ["my-workspace-no1"]
