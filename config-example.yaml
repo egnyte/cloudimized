@@ -8,6 +8,8 @@ services:
           project: <PROJECT_ID>
         gcp_log_resource_type: gce_network
         field_exclude_filter:
+          - selfLinkWithId
+          - networkFirewallPolicyEnforcementOrder
           - peerings:
               - stateDetails
         item_exclude_filter:
