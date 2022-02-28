@@ -134,6 +134,16 @@ Slack Service Account is used for sending detected change notification to Slack 
 See:
 * [Slack app setup](https://api.slack.com/authentication/basics)
 
+#### Jira Service Account
+
+Jira Service Account is used for creating issues(tickets) for selected changes. Depending on your Jira deployement
+(Cloud vs Server), you need to setup an account with proper permissions to create Issues of selected type in given
+project.
+
+See:
+* [Jira Cloud API token](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/)
+* [Jira Software docs](https://confluence.atlassian.com/jirasoftware/jira-software-documentation-774242447.html)
+
 ### Secrets
 
 All secrets required to run script need to be passed via env variables.
@@ -161,6 +171,10 @@ See:
 * [Best practices to securely authenticate applications in Google Cloud ](https://cloud.google.com/docs/authentication/best-practices-applications#overview_of_application_default_credentials)
 * [Authenticating as a service account](https://cloud.google.com/docs/authentication/production)
 * [gcloud auth application-default login](https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login)
+
+#### Jira secrets
+
+## TODO
 
 #### Terraform secrets
 

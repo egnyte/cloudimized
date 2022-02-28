@@ -1,0 +1,137 @@
+import unittest
+import mock
+
+from core.jiranotifier import configure_jiranotifier, JiraNotifier, JiraNotifierError, JIRA, logger
+from gitcore.gitchange import GitChange
+
+class JiraNotifierTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        kwargs = {"test_field": [{"name": "test_value"}]}
+        self.jiranotifier = JiraNotifier(jira_url="test_url",
+                                         projectkey="test_key",
+                                         username="test_user",
+                                         password="test_pass",
+                                         issuetype="test_type",
+                                         **kwargs)
+        self.gitchange = GitChange(resource_type="test_resource",
+                                   project="test_project")
+        self.gitchange.diff = "TEST_CHANGE_DIFF"
+        self.gitchange.changers = ["test_changer"]
+
+    def test_configure_incorrect_config_type(self):
+        with self.assertRaises(JiraNotifierError) as cm:
+            configure_jiranotifier(config="incorrect_config_type",
+                                   username="test_user",
+                                   password="test_password")
+        self.assertEqual(f"Incorrect Jira Notifier configuration. Should be dict, is <class 'str'>", str(cm.exception))
+
+    def test_configure_missing_required_key(self):
+        with self.assertRaises(JiraNotifierError) as cm:
+            configure_jiranotifier(config={"missing_required_key": ""},
+                                   username="test_user",
+                                   password="test_password")
+        self.assertEqual(f"Missing one of required config keys: ['url', 'projectKey']", str(cm.exception))
+
+    def test_configure_missing_credentials(self):
+        with self.assertRaises(JiraNotifierError) as cm:
+            configure_jiranotifier(config={"url": "", "projectKey": ""},
+                                   username="test_user",
+                                   password="")
+        self.assertEqual(f"Missing Jira Username/Password credentials", str(cm.exception))
+
+    def test_configure_incorrect_fields_type(self):
+        with self.assertRaises(JiraNotifierError) as cm:
+            configure_jiranotifier(config={"url": "", "projectKey": "",
+                                           "fields": "incorrect_type"},
+                                   username="test_user",
+                                   password="test_password")
+        self.assertEqual((f"Incorrect Jira Notifier Fields configuration. "
+                          f"Should be dict, is <class 'str'>"), str(cm.exception))
+
+    @mock.patch("core.jiranotifier.JiraNotifier", spec=JiraNotifier)
+    def test_configure_correct_result(self, mock_jiranotifier):
+        result = configure_jiranotifier(config={"url": "test_url",
+                                                "projectKey": "TEST",
+                                                "fields": {
+                                                    "extra": "testField"
+                                                }},
+                                        username="test_user",
+                                        password="test_password")
+        self.assertIsInstance(result, JiraNotifier)
+        mock_jiranotifier.assert_called_with(jira_url="test_url",
+                                             username="test_user",
+                                             password="test_password",
+                                             issuetype="Task",
+                                             projectkey="TEST",
+                                             extra="testField")
+
+    @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
+    def test_post_authentication_issue(self, mock_jira):
+        mock_jira.side_effect = Exception("Auth Issue")
+        with self.assertRaises(JiraNotifierError) as cm:
+            self.jiranotifier.post(self.gitchange)
+        self.assertEqual(f"Issue creating ticket\nAuth Issue", f"{str(cm.exception)}\n{str(cm.exception.__cause__)}")
+
+    @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
+    def test_post_creating_issue_issue(self, mock_jira):
+        mock_jira_object = mock.MagicMock()
+        mock_jira_object.create_issue.side_effect = Exception("Ticket create issue")
+        mock_jira.return_value = mock_jira_object
+        with self.assertRaises(JiraNotifierError) as cm:
+            self.jiranotifier.post(self.gitchange)
+        self.assertEqual(f"Issue creating ticket\nTicket create issue",
+                         f"{str(cm.exception)}\n{str(cm.exception.__cause__)}")
+        mock_jira_object.create_issue.assert_called_with(project={"key": "test_key"},
+                                                         summary=(f"GCP manual change detected - project: "
+                                                                  f"test_project, resource: test_resource"),
+                                                         description=(f"Manual changes performed by test_changer\n\n"
+                                                                      f"{{code:java}}\nTEST_CHANGE_DIFF\n{{code}}\n"),
+                                                         issuetype={"name": "test_type"},
+                                                         test_field=[{"name": "test_value"}])
+
+    @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
+    def test_post_update_assignee_issue(self, mock_jira):
+        mock_issue_object = mock.MagicMock()
+        mock_issue_object.update.side_effect = Exception("Update Issue")
+        type(mock_issue_object).id = mock.PropertyMock(return_value="TEST_ID")
+        mock_jira_object = mock.MagicMock()
+        mock_jira_object.create_issue.return_value = mock_issue_object
+        mock_jira.return_value = mock_jira_object
+        with self.assertLogs(logger, level="WARNING") as cm:
+            self.jiranotifier.post(self.gitchange)
+        self.assertEqual(f"WARNING:core.jiranotifier:Unable to assign ticket TEST_ID to changer: test_changer\n"
+                         f"Update Issue",
+                         cm.output[0])
+        mock_jira_object.create_issue.assert_called_with(project={"key": "test_key"},
+                                                         summary=(f"GCP manual change detected - project: "
+                                                                  f"test_project, resource: test_resource"),
+                                                         description=(f"Manual changes performed by test_changer\n\n"
+                                                                      f"{{code:java}}\nTEST_CHANGE_DIFF\n{{code}}\n"),
+                                                         issuetype={"name": "test_type"},
+                                                         test_field=[{"name": "test_value"}])
+        mock_issue_object.update.assert_called_with(assignee={"name": "test_changer"})
+
+    @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
+    def test_post_update_success(self, mock_jira):
+        mock_issue_object = mock.MagicMock()
+        type(mock_issue_object).id = mock.PropertyMock(return_value="TEST_ID")
+        mock_issue_object.__str__.return_value = "test_issue_str"
+        mock_jira_object = mock.MagicMock()
+        mock_jira_object.create_issue.return_value = mock_issue_object
+        mock_jira.return_value = mock_jira_object
+        with self.assertLogs(logger, level="INFO") as cm:
+            self.jiranotifier.post(self.gitchange)
+        self.assertEqual(f"INFO:core.jiranotifier:Issue test_issue_str assigned to user test_changer",
+                         cm.output[0])
+        mock_jira_object.create_issue.assert_called_with(project={"key": "test_key"},
+                                                         summary=(f"GCP manual change detected - project: "
+                                                                  f"test_project, resource: test_resource"),
+                                                         description=(f"Manual changes performed by test_changer\n\n"
+                                                                      f"{{code:java}}\nTEST_CHANGE_DIFF\n{{code}}\n"),
+                                                         issuetype={"name": "test_type"},
+                                                         test_field=[{"name": "test_value"}])
+        mock_issue_object.update.assert_called_with(assignee={"name": "test_changer"})
+
+
+if __name__ == '__main__':
+    unittest.main()

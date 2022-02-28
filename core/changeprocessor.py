@@ -150,6 +150,7 @@ class ChangeProcessor:
         # Add least one changer has been identified
         if changers:
             git_change.message = message
+            git_change.changers = changers
         else:
             message += f"\n Unable to identify changer"
             git_change.message = message
