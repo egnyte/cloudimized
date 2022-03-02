@@ -14,6 +14,7 @@ from tfcore.query import configure_tfquery, TFQueryConfigurationError, TERRAFORM
 from core.result import set_query_results_from_configuration, QueryResultError
 from core.changeprocessor import configure_change_processor, ChangeProcessorError, CHANGE_PROCESSOR
 from core.slacknotifier import SLACK_TOKEN
+from core.jiranotifier import JIRA_USR, JIRA_PSW
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +129,9 @@ class GcpOxidizer:
             self.change_processor = configure_change_processor(config=change_processor_config,
                                                                gcp_type_queries_map=self.gcp_type_queries_map,
                                                                repo=self.git_repo,
-                                                               slack_token=os.getenv(SLACK_TOKEN))
+                                                               slack_token=os.getenv(SLACK_TOKEN),
+                                                               jira_user=os.getenv(JIRA_USR),
+                                                               jira_token=os.getenv(JIRA_PSW))
         except ChangeProcessorError as e:
             raise GcpOxidizerConfigException(f"Issue with ChangeProcessor config") from e
         #TODO Add type checking for below options

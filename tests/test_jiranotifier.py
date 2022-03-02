@@ -12,6 +12,7 @@ class JiraNotifierTestCase(unittest.TestCase):
                                          username="test_user",
                                          password="test_pass",
                                          issuetype="test_type",
+                                         filter_set=None,
                                          **kwargs)
         self.gitchange = GitChange(resource_type="test_resource",
                                    project="test_project")
@@ -48,6 +49,32 @@ class JiraNotifierTestCase(unittest.TestCase):
         self.assertEqual((f"Incorrect Jira Notifier Fields configuration. "
                           f"Should be dict, is <class 'str'>"), str(cm.exception))
 
+    def test_configure_incorrect_filterset_type(self):
+        with self.assertRaises(JiraNotifierError) as cm:
+            configure_jiranotifier(config={"url": "", "projectKey": "",
+                                           "filterSet": "incorrect_type"},
+                                   username="test_user",
+                                   password="test_password")
+        self.assertEqual((f"Incorrect Jira Notifier FilterSet configuration. "
+                          f"Should be dict, is <class 'str'>"), str(cm.exception))
+
+    def test_configure_incorrect_projectidfilter_type(self):
+        with self.assertRaises(JiraNotifierError) as cm:
+            configure_jiranotifier(config={"url": "", "projectKey": "",
+                                           "filterSet": {"missing_key": None}},
+                                   username="test_user",
+                                   password="test_password")
+        self.assertEqual(f"Missing required param projectId", str(cm.exception))
+
+    def test_configure_incorrect_projectidfilter_value(self):
+        with self.assertRaises(JiraNotifierError) as cm:
+            configure_jiranotifier(config={"url": "", "projectKey": "",
+                                           "filterSet": {"projectId": []}},
+                                   username="test_user",
+                                   password="test_password")
+        self.assertEqual((f"Incorrect Jira Notifier projectId configuration value. "
+                         f"Should be str, is <class 'list'>"), str(cm.exception))
+
     @mock.patch("core.jiranotifier.JiraNotifier", spec=JiraNotifier)
     def test_configure_correct_result(self, mock_jiranotifier):
         result = configure_jiranotifier(config={"url": "test_url",
@@ -63,10 +90,28 @@ class JiraNotifierTestCase(unittest.TestCase):
                                              password="test_password",
                                              issuetype="Task",
                                              projectkey="TEST",
+                                             filter_set=None,
                                              extra="testField")
 
     @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
+    def test_post_non_manual_change(self, mock_jira):
+        self.gitchange.manual = False
+        result = self.jiranotifier.post(self.gitchange)
+        self.assertIsNone(result)
+        mock_jira.assert_not_called()
+
+    @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
+    def test_post_non_matching_filter(self, mock_jira):
+        self.gitchange.manual = True
+        filter_set = {"projectId": "NO_MATCH"}
+        self.jiranotifier.filter_set = filter_set
+        result = self.jiranotifier.post(self.gitchange)
+        self.assertIsNone(result)
+        mock_jira.assert_not_called()
+
+    @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
     def test_post_authentication_issue(self, mock_jira):
+        self.gitchange.manual = True
         mock_jira.side_effect = Exception("Auth Issue")
         with self.assertRaises(JiraNotifierError) as cm:
             self.jiranotifier.post(self.gitchange)
@@ -74,6 +119,7 @@ class JiraNotifierTestCase(unittest.TestCase):
 
     @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
     def test_post_creating_issue_issue(self, mock_jira):
+        self.gitchange.manual = True
         mock_jira_object = mock.MagicMock()
         mock_jira_object.create_issue.side_effect = Exception("Ticket create issue")
         mock_jira.return_value = mock_jira_object
@@ -91,15 +137,16 @@ class JiraNotifierTestCase(unittest.TestCase):
 
     @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
     def test_post_update_assignee_issue(self, mock_jira):
+        self.gitchange.manual = True
         mock_issue_object = mock.MagicMock()
         mock_issue_object.update.side_effect = Exception("Update Issue")
-        type(mock_issue_object).id = mock.PropertyMock(return_value="TEST_ID")
+        type(mock_issue_object).key = mock.PropertyMock(return_value="TEST_KEY")
         mock_jira_object = mock.MagicMock()
         mock_jira_object.create_issue.return_value = mock_issue_object
         mock_jira.return_value = mock_jira_object
         with self.assertLogs(logger, level="WARNING") as cm:
             self.jiranotifier.post(self.gitchange)
-        self.assertEqual(f"WARNING:core.jiranotifier:Unable to assign ticket TEST_ID to changer: test_changer\n"
+        self.assertEqual(f"WARNING:core.jiranotifier:Unable to assign ticket TEST_KEY to changer: test_changer\n"
                          f"Update Issue",
                          cm.output[0])
         mock_jira_object.create_issue.assert_called_with(project={"key": "test_key"},
@@ -113,16 +160,19 @@ class JiraNotifierTestCase(unittest.TestCase):
 
     @mock.patch("core.jiranotifier.JIRA", spec=JIRA)
     def test_post_update_success(self, mock_jira):
+        self.gitchange.manual = True
+        filter_set = {"projectId": ".est_pro.*"}
+        self.jiranotifier.filter_set = filter_set
         mock_issue_object = mock.MagicMock()
-        type(mock_issue_object).id = mock.PropertyMock(return_value="TEST_ID")
+        type(mock_issue_object).key = mock.PropertyMock(return_value="TEST_KEY")
         mock_issue_object.__str__.return_value = "test_issue_str"
         mock_jira_object = mock.MagicMock()
         mock_jira_object.create_issue.return_value = mock_issue_object
         mock_jira.return_value = mock_jira_object
         with self.assertLogs(logger, level="INFO") as cm:
             self.jiranotifier.post(self.gitchange)
-        self.assertEqual(f"INFO:core.jiranotifier:Issue test_issue_str assigned to user test_changer",
-                         cm.output[0])
+        self.assertEqual(f"INFO:core.jiranotifier:Assigning issue TEST_KEY to user test_changer",
+                         cm.output[-1])
         mock_jira_object.create_issue.assert_called_with(project={"key": "test_key"},
                                                          summary=(f"GCP manual change detected - project: "
                                                                   f"test_project, resource: test_resource"),
