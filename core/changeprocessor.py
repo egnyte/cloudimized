@@ -8,6 +8,7 @@ from gitcore.gitchange import GitChange
 from gcpcore.gcpquery import GcpQuery
 from gcpcore.gcpchangelog import getChangeLogs
 from core.slacknotifier import SlackNotifier, SlackNotifierError, configure_slack_notifier
+from core.jiranotifier import JiraNotifier, JiraNotifierError, configure_jiranotifier
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ TICKET_REGEX = "ticket_regex"
 TICKET_SYS_URL = "ticket_sys_url"
 TERRAFORM_SECTION = "terraform"
 SLACK_SECTION = "slack"
+JIRA_SECTION = "jira"
 
 class ChangeProcessor:
     """
@@ -32,7 +34,8 @@ class ChangeProcessor:
                  tf_query: TFQuery = None,
                  ticket_regex: str = None,
                  ticket_sys_url: str = None,
-                 slack_notifier: SlackNotifier = None):
+                 slack_notifier: SlackNotifier = None,
+                 jira_notifier: JiraNotifier = None):
         """
         :param repo: GitRepo holding configuration
         :param gcp_type_queries_map: resource name to GcpQuery mapping
@@ -51,6 +54,7 @@ class ChangeProcessor:
         self.ticket_regex = ticket_regex
         self.ticket_sys_url = ticket_sys_url
         self.slack_notifier = slack_notifier
+        self.jira_notifier = jira_notifier
 
     def process_change(self, git_change: GitChange, change_time: datetime = None):
         """
@@ -150,6 +154,7 @@ class ChangeProcessor:
         # Add least one changer has been identified
         if changers:
             git_change.message = message
+            git_change.changers = changers
         else:
             message += f"\n Unable to identify changer"
             git_change.message = message
@@ -164,6 +169,11 @@ class ChangeProcessor:
                 self.slack_notifier.post(git_change)
             except SlackNotifierError as e:
                 logger.warning(f"Issue sending message to Slack\n{e}\n{e.__cause__}")
+        if self.jira_notifier:
+            try:
+                self.jira_notifier.post(git_change)
+            except JiraNotifierError as e:
+                logger.warning(f"Issue creating ticket in Jira\n{e}\n{e.__cause__}")
 
     def process(self, git_changes: List[GitChange], change_time: datetime = None):
         """
@@ -195,13 +205,17 @@ class ChangeProcessor:
 def configure_change_processor(config: Dict[str, Any],
                                gcp_type_queries_map: Dict[str, GcpQuery],
                                repo: GitRepo,
-                               slack_token: str) -> ChangeProcessor:
+                               slack_token: str,
+                               jira_user: str,
+                               jira_token: str) -> ChangeProcessor:
     """
     Builds Change from configuraiton file
     :param config: dictionary containing configuraiton
     :param gcp_type_queries_map: resource_name to GcpQuery map
     :param repo: repo where config is stored
     :param slack_token: Slack's Bot API token
+    :param jira_user: Jira username for ticket creation
+    :param jira_token: Jira token/pass for ticket creation
     :return: ChangeProcessor with valid configuration
     """
     if not isinstance(config, dict):
@@ -222,6 +236,10 @@ def configure_change_processor(config: Dict[str, Any],
         slack_notifier = configure_slack_notifier(config.get(SLACK_SECTION, None), slack_token)
     except SlackNotifierError as e:
         raise ChangeProcessorError(f"Issue with SlackNotifier\n{e}\n{e.__cause__}") from e
+    try:
+        jira_notifier = configure_jiranotifier(config.get(JIRA_SECTION, None), username=jira_user, password=jira_token)
+    except JiraNotifierError as e:
+        raise ChangeProcessorError(f"Issue with JiraNotifier\n{e}\n{e.__cause__}") from e
     if not isinstance(scan_interval, int):
         raise ChangeProcessorError(f"Incorrect type of config element {SCAN_INTERVAL}. "
                                    f"Should be int, is {type(scan_interval)}")
@@ -251,7 +269,8 @@ def configure_change_processor(config: Dict[str, Any],
                            tf_query=tf_query,
                            ticket_regex=ticket_regex,
                            ticket_sys_url=ticket_sys_url,
-                           slack_notifier=slack_notifier)
+                           slack_notifier=slack_notifier,
+                           jira_notifier=jira_notifier)
 
 
 class ChangeProcessorError(Exception):
