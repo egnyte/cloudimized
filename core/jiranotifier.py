@@ -8,7 +8,7 @@ from gitcore.gitchange import GitChange
 logger = logging.getLogger(__name__)
 
 JIRA_USR = "JIRA_USR"
-JIRA_PSW = "JIRS_PSW"
+JIRA_PSW = "JIRA_PSW"
 
 DEFAULT_ISSUE_TYPE = "Task"
 URL = "url"
