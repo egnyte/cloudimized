@@ -172,10 +172,6 @@ See:
 * [Authenticating as a service account](https://cloud.google.com/docs/authentication/production)
 * [gcloud auth application-default login](https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login)
 
-#### Jira secrets
-
-## TODO
-
 #### Terraform secrets
 
 Cloudimized authenticates to Terraform using Team token for each Terraform organization. Tokens are stored in JSON file
@@ -193,6 +189,14 @@ or
 Cloudimized authenticates to Slack using Slack's Applications Bot User token. Token is passed to script via env var
 
 * env var `SLACK_TOKEN` set to token value
+
+#### Jira secrets
+
+Cloudimized authenticates to Jira using Username and Password/Token combination. Credentials are passed to script via
+env var
+
+* env var `JIRA_USR` - Jira's username
+* env var `JIRA_PSW` - Jira's password/token
 
 ### Configuration file
 
@@ -263,6 +267,20 @@ change_processor:
     channelID: "C123456789A"
     # Commit URL base in Git system. Used to create commit link
     repoCommitURL: "https://github.com/<ORG>/<REPO_NAME>/commit"
+  # Jira issue creator config
+  jira:
+     # Jira's URL
+     url: "https://my.jira.com"
+     # Jira's Project Key - Project in which create issue
+     projectKey: "KEY"
+     # Jira's Issue Type - Issue's type to be created (optional)
+     issueType: "Task" #default
+     # Jira's Issue fields - set values on fields in Issue (optional)
+     fields:
+        field_name: "field_value"
+     # Regex filter for selecting projects for which create issues (optional)
+     filterSet:
+        projectId: ".*production-only.*"
   # Terraform Runs configuration
   terraform:
     # Terraform URL
