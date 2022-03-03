@@ -282,7 +282,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config="invalid type",
                                        gcp_type_queries_map=self.type_query_map,
                                        repo=mock.MagicMock(spec=GitRepo),
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Incorrect type of config element change_processor. Should be dict, is <class 'str'>",
                          str(cm.exception))
 
@@ -292,7 +294,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config=self.config,
                                        gcp_type_queries_map=self.type_query_map,
                                        repo=mock.MagicMock(spec=GitRepo),
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Missing required parameter 'scan_interval' in 'change_processor' section.",
                          str(cm.exception))
 
@@ -302,7 +306,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config=self.config,
                                        gcp_type_queries_map=self.type_query_map,
                                        repo=mock.MagicMock(spec=GitRepo),
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Missing required parameter 'service_account_regex' in 'change_processor' section.",
                          str(cm.exception))
 
@@ -312,7 +318,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config=self.config,
                                        gcp_type_queries_map=self.type_query_map,
                                        repo=mock.MagicMock(spec=GitRepo),
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Incorrect type of config element scan_interval. Should be int, is <class 'str'>",
                          str(cm.exception))
 
@@ -322,7 +330,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config=self.config,
                                        gcp_type_queries_map=self.type_query_map,
                                        repo=mock.MagicMock(spec=GitRepo),
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Incorrect type of config element service_account_regex. Should be str, is <class 'int'>",
                          str(cm.exception))
 
@@ -332,7 +342,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config=self.config,
                                        gcp_type_queries_map=self.type_query_map,
                                        repo=mock.MagicMock(spec=GitRepo),
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Incorrect type of config element ticket_regex. Should be str, is <class 'int'>",
                          str(cm.exception))
 
@@ -342,7 +354,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config=self.config,
                                        gcp_type_queries_map=self.type_query_map,
                                        repo=mock.MagicMock(spec=GitRepo),
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Incorrect type of config element ticket_regex. Should be str, is <class 'int'>",
                          str(cm.exception))
 
@@ -351,7 +365,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config=self.config,
                                        gcp_type_queries_map="incorrect type",
                                        repo=mock.MagicMock(spec=GitRepo),
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Incorrect type of config element gcp_type_queries_map. Should be dict, is <class 'str'>",
                          str(cm.exception))
 
@@ -360,7 +376,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config=self.config,
                                        gcp_type_queries_map=self.type_query_map,
                                        repo="incorrect_type",
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Incorrect type of repo parameter. Should be GitRepo, is <class 'str'>",
                          str(cm.exception))
 
@@ -371,7 +389,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             configure_change_processor(config=self.config,
                                        gcp_type_queries_map=self.type_query_map,
                                        repo=mock.MagicMock(spec=GitRepo),
-                                       slack_token="test_token")
+                                       slack_token="test_token",
+                                       jira_user="test_jira_user",
+                                       jira_token="test_jira_psw")
         self.assertEqual("Incorrect type of tf_query parameter. Should be TFQuery, is <class 'str'>",
                          str(cm.exception))
 
@@ -379,13 +399,19 @@ class ChangeProcessorTestCase(unittest.TestCase):
         configure_change_processor(config=self.config,
                                    gcp_type_queries_map=self.type_query_map,
                                    repo=mock.MagicMock(spec=GitRepo),
-                                   slack_token="test_token")
+                                   slack_token="test_token",
+                                   jira_user="test_jira_user",
+                                   jira_token="test_jira_psw")
+
+    #TODO Add tests for jiranotifier
 
     def test_configure_success(self):
         result = configure_change_processor(config=self.config,
                                             gcp_type_queries_map=self.type_query_map,
                                             repo=mock.MagicMock(spec=GitRepo),
-                                            slack_token="test_token")
+                                            slack_token="test_token",
+                                            jira_user="test_jira_user",
+                                            jira_token="test_jira_psw")
 
 
 if __name__ == '__main__':

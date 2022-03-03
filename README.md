@@ -134,6 +134,16 @@ Slack Service Account is used for sending detected change notification to Slack 
 See:
 * [Slack app setup](https://api.slack.com/authentication/basics)
 
+#### Jira Service Account
+
+Jira Service Account is used for creating issues(tickets) for selected changes. Depending on your Jira deployement
+(Cloud vs Server), you need to setup an account with proper permissions to create Issues of selected type in given
+project.
+
+See:
+* [Jira Cloud API token](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/)
+* [Jira Software docs](https://confluence.atlassian.com/jirasoftware/jira-software-documentation-774242447.html)
+
 ### Secrets
 
 All secrets required to run script need to be passed via env variables.
@@ -179,6 +189,14 @@ or
 Cloudimized authenticates to Slack using Slack's Applications Bot User token. Token is passed to script via env var
 
 * env var `SLACK_TOKEN` set to token value
+
+#### Jira secrets
+
+Cloudimized authenticates to Jira using Username and Password/Token combination. Credentials are passed to script via
+env var
+
+* env var `JIRA_USR` - Jira's username
+* env var `JIRA_PSW` - Jira's password/token
 
 ### Configuration file
 
@@ -249,6 +267,20 @@ change_processor:
     channelID: "C123456789A"
     # Commit URL base in Git system. Used to create commit link
     repoCommitURL: "https://github.com/<ORG>/<REPO_NAME>/commit"
+  # Jira issue creator config
+  jira:
+     # Jira's URL
+     url: "https://my.jira.com"
+     # Jira's Project Key - Project in which create issue
+     projectKey: "KEY"
+     # Jira's Issue Type - Issue's type to be created (optional)
+     issueType: "Task" #default
+     # Jira's Issue fields - set values on fields in Issue (optional)
+     fields:
+        field_name: "field_value"
+     # Regex filter for selecting projects for which create issues (optional)
+     filterSet:
+        projectId: ".*production-only.*"
   # Terraform Runs configuration
   terraform:
     # Terraform URL

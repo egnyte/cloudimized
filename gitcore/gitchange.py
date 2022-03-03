@@ -22,6 +22,7 @@ class GitChange:
         self.diff = None
         self.manual = False
         self.commit = None
+        self.changers = None
         # List of GCP change logs related to this resource
         self.gcp_change_log = []
         # List of Terraform Runs related to this resource
