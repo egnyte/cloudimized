@@ -2,7 +2,7 @@ import unittest
 
 import mock
 
-from gitcore.gitchange import GitChange
+from cloudimized.gitcore.gitchange import GitChange
 
 class MyTestCase(unittest.TestCase):
     def testGetFilename(self):

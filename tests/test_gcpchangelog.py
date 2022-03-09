@@ -4,7 +4,7 @@ import datetime as dt
 
 import time_machine
 
-from gcpcore.gcpchangelog import GcpChangeLog, getChangeLogs
+from cloudimized.gcpcore.gcpchangelog import GcpChangeLog, getChangeLogs
 
 
 class GcpChangeLogTestCase(unittest.TestCase):
@@ -14,7 +14,7 @@ class GcpChangeLogTestCase(unittest.TestCase):
 
 
     # @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24)) #This is needed to mock datetime
-    @mock.patch("gcpcore.gcpchangelog.gcp_logging")
+    @mock.patch("cloudimized.gcpcore.gcpchangelog.gcp_logging")
     def testAllFields(self, mock_gcp_logging):
         # Mock GcpQuery object
         gcp_query = mock.MagicMock()
@@ -43,7 +43,7 @@ class GcpChangeLogTestCase(unittest.TestCase):
 
 
     # @time_machine.travel(dt.datetime(1985,10,26,1,24))
-    @mock.patch("gcpcore.gcpchangelog.gcp_logging")
+    @mock.patch("cloudimized.gcpcore.gcpchangelog.gcp_logging")
     def testEmptyFields(self, mock_gcp_logging):
         # Mock GcpQuery object
         gcp_query = mock.MagicMock()

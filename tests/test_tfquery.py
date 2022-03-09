@@ -4,9 +4,9 @@ import datetime as dt
 
 import time_machine
 
-from tfcore.query import TFQuery, TFQueryError, TFQueryConfigurationError, configure_tfquery
-import tfcore.query as q
-from tfcore.run import TFRun
+from cloudimized.tfcore.query import TFQuery, TFQueryError, TFQueryConfigurationError, configure_tfquery
+import cloudimized.tfcore.query as q
+from cloudimized.tfcore.run import TFRun
 
 class TFQueryTestCase(unittest.TestCase):
     def setUp(self) -> None:
@@ -19,7 +19,7 @@ class TFQueryTestCase(unittest.TestCase):
 
     #Query resolving workspace name to id fails
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 40))
-    @mock.patch("tfcore.query.TFC")
+    @mock.patch("cloudimized.tfcore.query.TFC")
     def test_workspace_id_fail(self, mock_tfc):
         mock_tf_api = mock.MagicMock()
         mock_tf_api.workspaces.show.side_effect = Exception()
@@ -29,7 +29,7 @@ class TFQueryTestCase(unittest.TestCase):
         mock_tf_api.workspaces.show.assert_called_with(workspace_name="test_workspace1")
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 40))
-    @mock.patch("tfcore.query.TFC")
+    @mock.patch("cloudimized.tfcore.query.TFC")
     def test_runs_list_fail(self, mock_tfc):
         mock_workspace_response = mock.MagicMock()
         mock_workspace_response.__getitem__.side_effect = test_workspace_response.__getitem__
@@ -43,8 +43,8 @@ class TFQueryTestCase(unittest.TestCase):
         mock_tf_api.runs.list.assert_called_with("id_test_workspace1", page_size=10, include=["created-by"])
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 40))
-    @mock.patch("tfcore.query.parse_tf_runs")
-    @mock.patch("tfcore.query.TFC")
+    @mock.patch("cloudimized.tfcore.query.parse_tf_runs")
+    @mock.patch("cloudimized.tfcore.query.TFC")
     def test_runs_parse_fails(self, mock_tfc, mock_parse):
         mock_workspace_response = mock.MagicMock()
         mock_workspace_response.__getitem__.side_effect = test_workspace_response.__getitem__
@@ -61,8 +61,8 @@ class TFQueryTestCase(unittest.TestCase):
         mock_parse.assert_called_with(test_runs_response, "test_org1", "test_workspace1")
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 40))
-    @mock.patch("tfcore.query.parse_tf_runs")
-    @mock.patch("tfcore.query.TFC")
+    @mock.patch("cloudimized.tfcore.query.parse_tf_runs")
+    @mock.patch("cloudimized.tfcore.query.TFC")
     def test_runs_success(self, mock_tfc, mock_parse):
         mock_workspace_response = mock.MagicMock()
         mock_workspace_response.__getitem__.side_effect = test_workspace_response.__getitem__
@@ -100,9 +100,9 @@ class TFQueryTestCase(unittest.TestCase):
         self.assertEqual(result[3].message, "test-message3")
 
 
-    @mock.patch("tfcore.query.getenv")
-    @mock.patch("tfcore.query.TFQuery", spec=TFQuery)
-    @mock.patch("tfcore.query.json.load")
+    @mock.patch("cloudimized.tfcore.query.getenv")
+    @mock.patch("cloudimized.tfcore.query.TFQuery", spec=TFQuery)
+    @mock.patch("cloudimized.tfcore.query.json.load")
     @mock.patch("builtins.open")
     def test_configure_tfquery(self, mock_open, mock_json_load, mock_tfquery, mock_getenv):
         mock_json_load.return_value = token_file_correct_data

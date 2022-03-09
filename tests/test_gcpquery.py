@@ -2,7 +2,7 @@ import logging
 import unittest
 import mock
 from copy import deepcopy
-from gcpcore.gcpquery import GcpQuery, GcpQueryError, GcpQueryArgumentError, configure_queries, logger
+from cloudimized.gcpcore.gcpquery import GcpQuery, GcpQueryError, GcpQueryArgumentError, configure_queries, logger
 
 
 class GcpQueryTestCase(unittest.TestCase):
@@ -183,7 +183,7 @@ class GcpQueryTestCase(unittest.TestCase):
         with self.assertLogs(logger, level="WARNING") as cm:
             result = query.execute(project_id="test_project")
             logger.warning("dummy warning")
-        self.assertEqual(["WARNING:gcpcore.gcpquery:dummy warning"], cm.output)
+        self.assertEqual(["WARNING:cloudimized.gcpcore.gcpquery:dummy warning"], cm.output)
         # self.assertEqual(cm.output, [(f"WARNING:gcpnetscanner.gcpcore.gcpquery:"
         #                               f"Skipping result sorting for API call 'firewalls.list' for project "
         #                              f"'test_project'. Missing default sort key in result 'name'")])
@@ -278,7 +278,7 @@ class GcpQueryTestCase(unittest.TestCase):
         result = query.execute(project_id=None)
         self.assertEqual(expected_testFieldAndItemFilter, result)
 
-    @mock.patch("gcpcore.gcpquery.GcpQuery", spec=GcpQuery)
+    @mock.patch("cloudimized.gcpcore.gcpquery.GcpQuery", spec=GcpQuery)
     def testConfigureQueries(self, mock_gcpquery):
         with self.assertRaises(GcpQueryArgumentError):
             configure_queries("incorrect type")

@@ -1,8 +1,8 @@
 import unittest
 import mock
 
-from gcpcore.gcpservicequery import GcpServiceQuery, configure_services
-from gcpcore.gcpservicequery import GcpServiceQueryError, GcpServiceQueryConfigError
+from cloudimized.gcpcore.gcpservicequery import GcpServiceQuery, configure_services
+from cloudimized.gcpcore.gcpservicequery import GcpServiceQueryError, GcpServiceQueryConfigError
 
 
 class GcpServiceQueryTestCase(unittest.TestCase):
@@ -19,9 +19,9 @@ class GcpServiceQueryTestCase(unittest.TestCase):
             self.gcpservice.build()
         self.assertEqual(f"Queries not configured for service compute", str(cm.exception))
 
-    @mock.patch("gcpcore.gcpservicequery.google.auth")
-    @mock.patch("gcpcore.gcpservicequery.discovery")
-    @mock.patch("gcpcore.gcpservicequery.getenv")
+    @mock.patch("cloudimized.gcpcore.gcpservicequery.google.auth")
+    @mock.patch("cloudimized.gcpcore.gcpservicequery.discovery")
+    @mock.patch("cloudimized.gcpcore.gcpservicequery.getenv")
     def testBuild(self, mock_getenv, mock_discovery, mock_auth):
         self.gcpservice.queries
         mock_getenv.return_value = "/creds/secret.file"

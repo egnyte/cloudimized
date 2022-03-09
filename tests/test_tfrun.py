@@ -3,7 +3,7 @@ import mock
 import logging
 
 from datetime import datetime
-from tfcore.run import TFRun, TFRunError, parse_tf_runs, filter_non_change_runs
+from cloudimized.tfcore.run import TFRun, TFRunError, parse_tf_runs, filter_non_change_runs
 
 class TFRunTestCase(unittest.TestCase):
     def setUp(self) -> None:
@@ -22,7 +22,7 @@ class TFRunTestCase(unittest.TestCase):
         result = parse_tf_runs(tf_run_status_planning, "test_org", "test_workspace")
         self.assertEqual(result, [])
 
-    @mock.patch("tfcore.run.TFRun")
+    @mock.patch("cloudimized.tfcore.run.TFRun")
     def test_parse_relevant_runs(self, mock_tfrun):
         result = parse_tf_runs(tf_run_status_relevant, "test_org", "test_workspace")
         # Assert that those two TFRun objects were created and returned in list

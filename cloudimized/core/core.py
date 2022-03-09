@@ -1,19 +1,20 @@
 import argparse
 import logging
 import os
-import sys
 
+import sys
 import yaml
 
-from gcpcore.gcpservicequery import configure_services, GcpServiceQueryConfigError
-from gcpcore.gcpservicequery import SERVICE_NAME, SERVICE_SECTION, VERSION, QUERIES
-from gcpcore.gcpquery import configure_queries, GcpQueryArgumentError, GcpQueryError
-from gcpcore.gcpquery import RESOURCE, GCP_API_CALL, RESULT_ITEMS_FIELD, ITEM_EXCLUDE_FILTER, GCP_LOG_RESOURCE_TYPE
-from gitcore.repo import configure_repo, GitRepoError, GitRepoConfigError, GIT_USER, GIT_PASSWORD, GIT_SECTION
-from tfcore.query import configure_tfquery, TFQueryConfigurationError, TERRAFORM_SECTION
-from core.result import set_query_results_from_configuration, QueryResultError
-from core.changeprocessor import configure_change_processor, ChangeProcessorError, CHANGE_PROCESSOR
-from core.slacknotifier import SLACK_TOKEN
+from cloudimized.core.changeprocessor import configure_change_processor, ChangeProcessorError, CHANGE_PROCESSOR
+from cloudimized.core.result import set_query_results_from_configuration, QueryResultError
+from cloudimized.core.slacknotifier import SLACK_TOKEN
+from cloudimized.gcpcore.gcpquery import RESOURCE, GCP_API_CALL, RESULT_ITEMS_FIELD, ITEM_EXCLUDE_FILTER, \
+    GCP_LOG_RESOURCE_TYPE
+from cloudimized.gcpcore.gcpquery import configure_queries, GcpQueryArgumentError, GcpQueryError
+from cloudimized.gcpcore.gcpservicequery import SERVICE_NAME, SERVICE_SECTION, VERSION, QUERIES
+from cloudimized.gcpcore.gcpservicequery import configure_services, GcpServiceQueryConfigError
+from cloudimized.gitcore.repo import configure_repo, GitRepoError, GitRepoConfigError, GIT_USER, GIT_PASSWORD, \
+    GIT_SECTION
 from core.jiranotifier import JIRA_USR, JIRA_PSW
 
 logger = logging.getLogger(__name__)
@@ -134,12 +135,12 @@ class GcpOxidizer:
                                                                jira_token=os.getenv(JIRA_PSW))
         except ChangeProcessorError as e:
             raise GcpOxidizerConfigException(f"Issue with ChangeProcessor config") from e
-        #TODO Add type checking for below options
-        #TODO Add config check when discovery list is disabled and project list is not provided
+        # TODO Add type checking for below options
+        # TODO Add config check when discovery list is disabled and project list is not provided
         self.do_project_discovery = config.get(DISCOVER_PROJECTS_KEY, "False")
         self.excluded_projects = config.get(EXCLUDED_PROJECTS_KEY, [])
-        self.projects = config.get(PROJECTS_LIST_KEY, None) #TODO Add logic to detect if list is not set
-        #TODO Move logging setup at the beggining
+        self.projects = config.get(PROJECTS_LIST_KEY, None)  # TODO Add logic to detect if list is not set
+        # TODO Move logging setup at the beggining
         self.set_logging(self.loglevel)
 
     def set_logging(self, loglevel: str):
@@ -157,7 +158,7 @@ class GcpOxidizer:
         logger.info(f"Performing GCP projects discovery")
         project_service = configure_services(PROJECTS_DISCOVERY_SERVICE_CONFIG)
         project_service[PROJECTS_DISCOVERY_SERVICE_NAME].queries = \
-                configure_queries(PROJECTS_DISCOVERY_SERVICE_CONFIG[0][GCP_QUERIES])
+            configure_queries(PROJECTS_DISCOVERY_SERVICE_CONFIG[0][GCP_QUERIES])
         project_service[PROJECTS_DISCOVERY_SERVICE_NAME].build()
         result = project_service[PROJECTS_DISCOVERY_SERVICE_NAME].queries[PROJECTS_DISCOVERY_RESOURCE_NAME] \
             .execute(project_id=None)
@@ -191,7 +192,7 @@ class GcpOxidizer:
                     except GcpQueryError as e:
                         logger.warning(f"Issue when performing query for resource '{resource_name} "
                                        f"for project '{project_id}\n{e}\n{e.__cause__}")
-                        #TODO: Add handling of failed queries i.e. error stats at the end
+                        # TODO: Add handling of failed queries i.e. error stats at the end
 
     @staticmethod
     def run():
