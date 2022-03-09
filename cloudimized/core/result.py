@@ -1,5 +1,6 @@
 import logging
 import yaml
+import csv
 from typing import List, Dict
 from pathlib import Path
 from os.path import isdir
@@ -8,6 +9,7 @@ from cloudimized.gcpcore.gcpservicequery import GcpServiceQuery
 
 logger = logging.getLogger(__name__)
 
+PROJECTID_KEY = "projectId"
 
 class QueryResult:
     """
@@ -72,6 +74,46 @@ class QueryResult:
                 except Exception as e:
                     raise QueryResultError(f"Issue dumping results into file "
                                            f"'{directory}/{resource_name}/{project_id}.yaml")
+
+    def dump_results_csv(self, directory: str) -> None:
+        """
+        Save results in CSV files
+        :param directory: directory to which dump CSV files
+        :raises QueryResultError
+        """
+        logger.info(f"Dumping results in CSV files")
+        if not isdir(directory):
+            raise QueryResultError(f"Issue dumping results to files. Directory '{directory}' doesn't exist")
+        # Get fieldnames
+        for resource_name, projects in self.resources.items():
+            logger.info(f"Discovering fieldnames for resource: {resource_name}")
+            fieldnames = None
+            for project_id, result in projects.items():
+                for entry in result:
+                    try:
+                        fieldnames = [PROJECTID_KEY] + list(entry.keys())
+                        break
+                    except Exception as e:
+                        logger.warning(f"Unable to get fieldnames for resource {resource_name} from entry {entry}")
+                        continue
+                else:
+                    # Unable to retrieve fieldnames from any entry
+                    raise QueryResultError(f"Unable to retrieve fieldname for resource{resource_name}")
+        for resource_name, projects in self.resources.items():
+            filename = f"{directory}/{resource_name}.csv"
+            logger.info(f"Dumping results in {filename}")
+            try:
+                with open(filename, "w", newline="") as csvfile:
+                    writer = csv.DictWriter(csvfile, fieldnames)
+                    writer.writeheader()
+                    for project_id, result in projects.items():
+                        if not result:
+                            continue
+                        for entry in result:
+                            entry[PROJECTID_KEY] = project_id
+                            writer.writerow(entry)
+            except Exception as e:
+                raise QueryResultError(f"Issue writing results to file {filename}") from e
 
 
 def set_query_results_from_configuration(gcp_services: Dict[str, GcpServiceQuery]) -> QueryResult:

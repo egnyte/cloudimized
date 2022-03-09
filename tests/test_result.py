@@ -127,6 +127,7 @@ class QueryResultTestCase(unittest.TestCase):
         mock_b_open.assert_not_called()
         mock_dump.assert_not_called()
 
+#TODO Add tests for single run mode
 
 if __name__ == '__main__':
     unittest.main()

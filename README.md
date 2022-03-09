@@ -294,3 +294,28 @@ change_processor:
         # Terraform workspaces list
         workspace: ["my-workspace-no1"]       
 ```
+
+## Single run mode
+
+Allows to run cloudimized only to scan given resource and dump them into text files, without performing and additional
+functions (no Git, Terraform, Slack, Jira interaction and no GCP logs lookup).
+
+### Running
+
+```yaml
+python3 main.py --singlerun/-s <RESOURCE_NAME> --output/-o {yaml, csv}
+
+i.e
+python3 main.py -s addresses -o csv
+```
+
+### Configuration
+
+Resource configurations for single run (**<RESOURCE_NAME>** parameter) to be scanned are stored in **singlerunconfigs**
+directory and are selected based on filename. Resource configuration is the same as in main config file. Additional
+singe run mode configs can be added to folder as needed.
+
+### Output
+
+By default script will dump results in YAML format same as in main mode. If chosen it can dump results in CSV file
+format (single file per resource).

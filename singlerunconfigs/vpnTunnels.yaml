@@ -1,0 +1,13 @@
+serviceName: compute
+version: v1
+queries:
+  - resource: vpnTunnels
+    gcp_api_call: vpnTunnels.aggregatedList
+    gcp_function_args:
+      project: <PROJECT_ID>
+    gcp_log_resource_type: vpn_tunnel
+    field_exclude_filter:
+      - sharedSecretHash
+      - sharedSecret
+      - status
+      - detailedStatus
