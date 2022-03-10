@@ -18,6 +18,9 @@ class GcpQueryTestCase(unittest.TestCase):
         self.query_response_multiple_items = deepcopy(query_response_multiple_items_org)
         #TODO deepcopy of all test data dict
 
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
+
     def testArguments(self):
         # Test argument conflict
         with self.assertRaises(GcpQueryArgumentError) as cm:

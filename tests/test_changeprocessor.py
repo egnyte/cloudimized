@@ -52,6 +52,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             "test_resource" : mock.MagicMock(spec=GcpQuery)
         }
 
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
+
     def test_process_add_error(self):
         self.processor.repo.repo.git.add.side_effect = Exception("test_error")
         with self.assertRaises(ChangeProcessorError) as cm:

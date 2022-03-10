@@ -9,6 +9,9 @@ class TFRunTestCase(unittest.TestCase):
     def setUp(self) -> None:
         logging.disable(logging.WARNING)
 
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
+
     def test_parse_no_data(self):
         with self.assertRaises(TFRunError):
             parse_tf_runs({}, "test_org", "test_workspace")

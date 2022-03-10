@@ -1,3 +1,4 @@
+import logging
 import unittest
 import mock
 import datetime as dt
@@ -10,8 +11,10 @@ from cloudimized.gcpcore.gcpchangelog import GcpChangeLog, getChangeLogs
 class GcpChangeLogTestCase(unittest.TestCase):
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24)) #This is needed to mock datetime
     def setUp(self):
-        pass
+        logging.disable(logging.WARNING)
 
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
 
     # @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24)) #This is needed to mock datetime
     @mock.patch("cloudimized.gcpcore.gcpchangelog.gcp_logging")
