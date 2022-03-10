@@ -149,8 +149,8 @@ class JiraNotifierTestCase(unittest.TestCase):
         mock_jira.return_value = mock_jira_object
         with self.assertLogs(logger, level="WARNING") as cm:
             self.jiranotifier.post(self.gitchange)
-        self.assertEqual(f"WARNING:core.jiranotifier:Unable to assign ticket TEST_KEY to changer: test_changer\n"
-                         f"Update Issue",
+        self.assertEqual(f"WARNING:cloudimized.core.jiranotifier:Unable to assign ticket TEST_KEY to "
+                         f"changer: test_changer\nUpdate Issue",
                          cm.output[0])
         mock_jira_object.create_issue.assert_called_with(project={"key": "test_key"},
                                                          summary=(f"GCP manual change detected - project: "
@@ -174,7 +174,7 @@ class JiraNotifierTestCase(unittest.TestCase):
         mock_jira.return_value = mock_jira_object
         with self.assertLogs(logger, level="INFO") as cm:
             self.jiranotifier.post(self.gitchange)
-        self.assertEqual(f"INFO:core.jiranotifier:Assigning issue TEST_KEY to user test_changer",
+        self.assertEqual(f"INFO:cloudimized.core.jiranotifier:Assigning issue TEST_KEY to user test_changer",
                          cm.output[-1])
         mock_jira_object.create_issue.assert_called_with(project={"key": "test_key"},
                                                          summary=(f"GCP manual change detected - project: "
