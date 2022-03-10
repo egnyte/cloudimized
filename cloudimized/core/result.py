@@ -84,22 +84,20 @@ class QueryResult:
         logger.info(f"Dumping results in CSV files")
         if not isdir(directory):
             raise QueryResultError(f"Issue dumping results to files. Directory '{directory}' doesn't exist")
+        fieldnames_map = {}
         # Get fieldnames
         for resource_name, projects in self.resources.items():
             logger.info(f"Discovering fieldnames for resource: {resource_name}")
-            fieldnames = None
+            fieldnames_map[resource_name] = set()
             for project_id, result in projects.items():
                 for entry in result:
                     try:
-                        fieldnames = [PROJECTID_KEY] + list(entry.keys())
-                        break
+                        fieldnames_map[resource_name].update(entry.keys())
                     except Exception as e:
                         logger.warning(f"Unable to get fieldnames for resource {resource_name} from entry {entry}")
                         continue
-                else:
-                    # Unable to retrieve fieldnames from any entry
-                    raise QueryResultError(f"Unable to retrieve fieldname for resource{resource_name}")
         for resource_name, projects in self.resources.items():
+            fieldnames = [PROJECTID_KEY] + sorted(list(fieldnames_map[resource_name]))
             filename = f"{directory}/{resource_name}.csv"
             logger.info(f"Dumping results in {filename}")
             try:
