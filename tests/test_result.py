@@ -127,7 +127,7 @@ class QueryResultTestCase(unittest.TestCase):
         mock_b_open.assert_not_called()
         mock_dump.assert_not_called()
 
-    @mock.patch("core.result.isdir")
+    @mock.patch("cloudimized.core.result.isdir")
     def test_dump_results_csv_not_directory(self, mock_isdir):
         mock_isdir.return_value = False
         with self.assertRaises(QueryResultError) as cm:
@@ -137,9 +137,9 @@ class QueryResultTestCase(unittest.TestCase):
 
 #TODO Test exceptions in dump_results_csv
 
-    @mock.patch("core.result.csv.DictWriter")
+    @mock.patch("cloudimized.core.result.csv.DictWriter")
     @mock.patch("builtins.open")
-    @mock.patch("core.result.isdir")
+    @mock.patch("cloudimized.core.result.isdir")
     def test_dump_results_success(self, mock_isdir, mock_b_open, mock_dictwriter):
         mock_isdir.return_value = True
         mock_fh = mock.MagicMock()
