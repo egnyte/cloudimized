@@ -297,7 +297,8 @@ class GcpOxidizer:
                 logger.critical(f"Issue processing Git changes\n{e}\n{e.__cause__}")
         logger.info("Run completed")
 
-def run():
+
+def execute():
     try:
         # Setup and parse configuraiton
         gcpoxidizer = GcpOxidizer()
