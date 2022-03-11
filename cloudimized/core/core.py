@@ -15,7 +15,7 @@ from cloudimized.gcpcore.gcpservicequery import SERVICE_NAME, SERVICE_SECTION, V
 from cloudimized.gcpcore.gcpservicequery import configure_services, GcpServiceQueryConfigError
 from cloudimized.gitcore.repo import configure_repo, GitRepoError, GitRepoConfigError, GIT_USER, GIT_PASSWORD, \
     GIT_SECTION
-from core.jiranotifier import JIRA_USR, JIRA_PSW
+from cloudimized.core.jiranotifier import JIRA_USR, JIRA_PSW
 
 logger = logging.getLogger(__name__)
 
