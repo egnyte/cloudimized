@@ -194,53 +194,53 @@ class GcpOxidizer:
                                        f"for project '{project_id}\n{e}\n{e.__cause__}")
                         # TODO: Add handling of failed queries i.e. error stats at the end
 
-    @staticmethod
-    def run():
+
+def execute():
+    try:
+        # Setup and parse configuraiton
+        gcpoxidizer = GcpOxidizer()
+    except GcpOxidizerConfigException as e:
+        logger.critical(f"Error in GcpOxidizer configuration\n{e}\n{e.__cause__}")
+        sys.exit(1)
+    try:
+        gcpoxidizer.git_repo.setup()
+    except GitRepoError as e:
+        logger.critical(f"Error setting up Git Repo: '{gcpoxidizer.git_repo.repo_url}'\n{e}\n{e.__cause__}")
+    if gcpoxidizer.do_project_discovery:
         try:
-            # Setup and parse configuraiton
-            gcpoxidizer = GcpOxidizer()
-        except GcpOxidizerConfigException as e:
-            logger.critical(f"Error in GcpOxidizer configuration\n{e}\n{e.__cause__}")
+            gcpoxidizer.discover_projects()
+        except Exception as e:
+            logger.critical(f"Issue during projects discovery\n{e}\n{e.__cause__}")
             sys.exit(1)
+    # Clean repo
+    try:
+        gcpoxidizer.git_repo.clean_repo()
+        pass
+    except GitRepoError as e:
+        logger.critical(f"Issue during Git repo preparation\n{e}\n{e.__cause__}")
+        sys.exit(1)
+    # Run all queries
+    gcpoxidizer.run_queries()
+    # Dump results to files
+    try:
+        gcpoxidizer.run_results.dump_results(directory=gcpoxidizer.git_repo.directory)
+    except QueryResultError as e:
+        logger.critical(f"Issue during dumping results to local files\n{e}\n{e.__cause__}")
+    try:
+        logger.info(f"Checking Git configuration files for changes")
+        git_changes = gcpoxidizer.git_repo.get_changes()
+    except GitRepoError as e:
+        logger.critical(f"Issue verifying changes in Git Repo\n{e}\n{e.__cause__}")
+    if not git_changes:
+        logger.info(f"No Git configuration file changes detected")
+        return
+    else:
         try:
-            gcpoxidizer.git_repo.setup()
-        except GitRepoError as e:
-            logger.critical(f"Error setting up Git Repo: '{gcpoxidizer.git_repo.repo_url}'\n{e}\n{e.__cause__}")
-        if gcpoxidizer.do_project_discovery:
-            try:
-                gcpoxidizer.discover_projects()
-            except Exception as e:
-                logger.critical(f"Issue during projects discovery\n{e}\n{e.__cause__}")
-                sys.exit(1)
-        # Clean repo
-        try:
-            gcpoxidizer.git_repo.clean_repo()
-            pass
-        except GitRepoError as e:
-            logger.critical(f"Issue during Git repo preparation\n{e}\n{e.__cause__}")
-            sys.exit(1)
-        # Run all queries
-        gcpoxidizer.run_queries()
-        # Dump results to files
-        try:
-            gcpoxidizer.run_results.dump_results(directory=gcpoxidizer.git_repo.directory)
-        except QueryResultError as e:
-            logger.critical(f"Issue during dumping results to local files\n{e}\n{e.__cause__}")
-        try:
-            logger.info(f"Checking Git configuration files for changes")
-            git_changes = gcpoxidizer.git_repo.get_changes()
-        except GitRepoError as e:
-            logger.critical(f"Issue verifying changes in Git Repo\n{e}\n{e.__cause__}")
-        if not git_changes:
-            logger.info(f"No Git configuration file changes detected")
-            return
-        else:
-            try:
-                logger.info(f"Processing {len(git_changes)} Git change(s)")
-                gcpoxidizer.change_processor.process(git_changes=git_changes)
-            except ChangeProcessorError as e:
-                logger.critical(f"Issue processing Git changes\n{e}\n{e.__cause__}")
-        logger.info("Run completed")
+            logger.info(f"Processing {len(git_changes)} Git change(s)")
+            gcpoxidizer.change_processor.process(git_changes=git_changes)
+        except ChangeProcessorError as e:
+            logger.critical(f"Issue processing Git changes\n{e}\n{e.__cause__}")
+    logger.info("Run completed")
 
 
 class GcpOxidizerException(Exception):

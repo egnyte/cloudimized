@@ -1,8 +1,8 @@
-from cloudimized.core.core import GcpOxidizer
+from cloudimized.core.core import execute
 
 
 def run():
-    GcpOxidizer().run()
+    execute()
 
 
 if __name__ == "__main__":
