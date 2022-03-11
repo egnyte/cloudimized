@@ -20,6 +20,7 @@ from cloudimized.core.jiranotifier import JIRA_USR, JIRA_PSW
 logger = logging.getLogger(__name__)
 
 CONFIG_FILE = "config.yaml"
+SINGLE_RUN_CONFIGS_DIR = "singlerunconfigs"
 
 # Configuration file - key names
 GCP_QUERIES = "queries"
@@ -56,7 +57,9 @@ class GcpOxidizer:
     def __init__(self):
         (
             self.config_file,
-            self.loglevel
+            self.loglevel,
+            self.singlerun,
+            self.output
         ) = self.parse_args()
         self.gcp_services = None
         self.gcp_type_queries_map = {}
@@ -67,17 +70,28 @@ class GcpOxidizer:
         self.projects = None
         self.run_results = None
         self.change_processor = None
-        self.parse_config_file()
+        if not self.singlerun:
+            self.parse_config_file()
+        else:
+            self.set_single_run(resource_name=self.singlerun)
+            self.set_logging(self.loglevel)
 
     def parse_args(self):
-        parser = argparse.ArgumentParser("Runs GCP oxidizer")
+        parser = argparse.ArgumentParser("Runs GCP oxidizer",
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument("-c", "--config", default=CONFIG_FILE, help="Configuration file")
         parser.add_argument("-l", "--loglevel", default="INFO", help="Set logging level",
                             choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"])
+        singlerun_group = parser.add_argument_group('Single Run Mode')
+        singlerun_group.add_argument("-s", "--singlerun", type=str, help="Resource name to scan")
+        singlerun_group.add_argument("-o", "--output", default="yaml", choices=["yaml", "csv"],
+                                     help="Output file format")
         args = parser.parse_args()
         return (
             args.config,
-            args.loglevel
+            args.loglevel,
+            args.singlerun,
+            args.output
         )
 
     def parse_config_file(self) -> None:
@@ -143,6 +157,37 @@ class GcpOxidizer:
         # TODO Move logging setup at the beggining
         self.set_logging(self.loglevel)
 
+    def set_single_run(self, resource_name: str):
+        """
+        Prepare configuration for single run mode
+        :param resource_name: GCP resource name to scan
+        """
+        try:
+            script_dir, _ = os.path.split(__file__)
+            filename = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}/{resource_name}.yaml"
+            with open(filename) as fh:
+                service = yaml.safe_load(fh)
+        except yaml.YAMLError as e:
+            raise GcpOxidizerConfigException(f"Error opening yaml file: '{filename}'") from e
+        try:
+            self.gcp_services = configure_services([service])
+        except GcpServiceQueryConfigError as e:
+            raise GcpOxidizerConfigException(f"Error in service config in file: '{filename}'") from e
+        try:
+            serviceName = service[SERVICE_NAME]
+            queries = configure_queries(service[GCP_QUERIES])
+            self.gcp_services[serviceName].queries = queries
+            self.gcp_type_queries_map.update(queries)
+        except GcpQueryArgumentError as e:
+            raise GcpOxidizerConfigException(f"Error in query config in file: '{filename}'") from e
+        try:
+            self.run_results = set_query_results_from_configuration(self.gcp_services)
+        except QueryResultError as e:
+            raise GcpOxidizerConfigException(f"Error in service/query configuration") from e
+        self.excluded_projects = []
+
+
+
     def set_logging(self, loglevel: str):
         """
         Configures logging
@@ -192,7 +237,66 @@ class GcpOxidizer:
                     except GcpQueryError as e:
                         logger.warning(f"Issue when performing query for resource '{resource_name} "
                                        f"for project '{project_id}\n{e}\n{e.__cause__}")
-                        # TODO: Add handling of failed queries i.e. error stats at the end
+                        #TODO: Add handling of failed queries i.e. error stats at the end
+
+    def singlerun_mode(self):
+        # Discover all projects
+        try:
+            self.discover_projects()
+        except Exception as e:
+            logger.critical(f"Issue during projects discovery\n{e}\n{e.__cause__}")
+            sys.exit(1)
+        # Run queries
+        self.run_queries()
+        # Dump results to files
+        try:
+            if self.output == "csv":
+                self.run_results.dump_results_csv(directory=".")
+            elif self.output == "yaml":
+                self.run_results.dump_results(directory=".")
+        except QueryResultError as e:
+            logger.critical(f"Issue during dumping results to local files\n{e}\n{e.__cause__}")
+
+    def main_mode(self):
+        try:
+            self.git_repo.setup()
+        except GitRepoError as e:
+            logger.critical(f"Error setting up Git Repo: '{self.git_repo.repo_url}'\n{e}\n{e.__cause__}")
+        if self.do_project_discovery:
+            try:
+                self.discover_projects()
+            except Exception as e:
+                logger.critical(f"Issue during projects discovery\n{e}\n{e.__cause__}")
+                sys.exit(1)
+        # Clean repo
+        try:
+            self.git_repo.clean_repo()
+            pass
+        except GitRepoError as e:
+            logger.critical(f"Issue during Git repo preparation\n{e}\n{e.__cause__}")
+            sys.exit(1)
+        # Run all queries
+        self.run_queries()
+        # Dump results to files
+        try:
+            self.run_results.dump_results(directory=self.git_repo.directory)
+        except QueryResultError as e:
+            logger.critical(f"Issue during dumping results to local files\n{e}\n{e.__cause__}")
+        try:
+            logger.info(f"Checking Git configuration files for changes")
+            git_changes = self.git_repo.get_changes()
+        except GitRepoError as e:
+            logger.critical(f"Issue verifying changes in Git Repo\n{e}\n{e.__cause__}")
+        if not git_changes:
+            logger.info(f"No Git configuration file changes detected")
+            return
+        else:
+            try:
+                logger.info(f"Processing {len(git_changes)} Git change(s)")
+                self.change_processor.process(git_changes=git_changes)
+            except ChangeProcessorError as e:
+                logger.critical(f"Issue processing Git changes\n{e}\n{e.__cause__}")
+        logger.info("Run completed")
 
 
 def execute():
@@ -202,45 +306,12 @@ def execute():
     except GcpOxidizerConfigException as e:
         logger.critical(f"Error in GcpOxidizer configuration\n{e}\n{e.__cause__}")
         sys.exit(1)
-    try:
-        gcpoxidizer.git_repo.setup()
-    except GitRepoError as e:
-        logger.critical(f"Error setting up Git Repo: '{gcpoxidizer.git_repo.repo_url}'\n{e}\n{e.__cause__}")
-    if gcpoxidizer.do_project_discovery:
-        try:
-            gcpoxidizer.discover_projects()
-        except Exception as e:
-            logger.critical(f"Issue during projects discovery\n{e}\n{e.__cause__}")
-            sys.exit(1)
-    # Clean repo
-    try:
-        gcpoxidizer.git_repo.clean_repo()
-        pass
-    except GitRepoError as e:
-        logger.critical(f"Issue during Git repo preparation\n{e}\n{e.__cause__}")
-        sys.exit(1)
-    # Run all queries
-    gcpoxidizer.run_queries()
-    # Dump results to files
-    try:
-        gcpoxidizer.run_results.dump_results(directory=gcpoxidizer.git_repo.directory)
-    except QueryResultError as e:
-        logger.critical(f"Issue during dumping results to local files\n{e}\n{e.__cause__}")
-    try:
-        logger.info(f"Checking Git configuration files for changes")
-        git_changes = gcpoxidizer.git_repo.get_changes()
-    except GitRepoError as e:
-        logger.critical(f"Issue verifying changes in Git Repo\n{e}\n{e.__cause__}")
-    if not git_changes:
-        logger.info(f"No Git configuration file changes detected")
-        return
+    if not gcpoxidizer.singlerun:
+        logger.info("Running in main mode")
+        gcpoxidizer.main_mode()
     else:
-        try:
-            logger.info(f"Processing {len(git_changes)} Git change(s)")
-            gcpoxidizer.change_processor.process(git_changes=git_changes)
-        except ChangeProcessorError as e:
-            logger.critical(f"Issue processing Git changes\n{e}\n{e.__cause__}")
-    logger.info("Run completed")
+        logger.info("Running in single run mode")
+        gcpoxidizer.singlerun_mode()
 
 
 class GcpOxidizerException(Exception):

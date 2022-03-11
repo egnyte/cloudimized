@@ -127,6 +127,38 @@ class QueryResultTestCase(unittest.TestCase):
         mock_b_open.assert_not_called()
         mock_dump.assert_not_called()
 
+    @mock.patch("cloudimized.core.result.isdir")
+    def test_dump_results_csv_not_directory(self, mock_isdir):
+        mock_isdir.return_value = False
+        with self.assertRaises(QueryResultError) as cm:
+            self.queryresult.dump_results_csv("test_directory")
+        self.assertEqual("Issue dumping results to files. Directory 'test_directory' doesn't exist",
+                         str(cm.exception))
+
+#TODO Test exceptions in dump_results_csv
+
+    @mock.patch("cloudimized.core.result.csv.DictWriter")
+    @mock.patch("builtins.open")
+    @mock.patch("cloudimized.core.result.isdir")
+    def test_dump_results_success(self, mock_isdir, mock_b_open, mock_dictwriter):
+        mock_isdir.return_value = True
+        mock_fh = mock.MagicMock()
+        mock_fh.__enter__.return_value = mock.MagicMock()
+        mock_b_open.return_value = mock_fh
+        mock_writer = mock.MagicMock()
+        mock_dictwriter.return_value = mock_writer
+        self.queryresult.resources = test_dump_result
+        self.queryresult.dump_results_csv("test_directory")
+        mock_isdir.assert_called_once()
+        mock_b_open.assert_called_once_with("test_directory/test_resource.csv",
+                                            "w",
+                                            newline="")
+        mock_dictwriter.assert_called_once_with(mock_fh.__enter__.return_value,
+                                                ["projectId", "id", "name", "test_field1", "test_field2",
+                                                 "test_field3", "test_field4"])
+        mock_writer.writeheader.assert_called_once()
+        #TODO finish test
+
 
 if __name__ == '__main__':
     unittest.main()
@@ -138,4 +170,17 @@ test_result = [
 
 test_gcp_services = {
     "test_serviceName": mock.MagicMock(spec=GcpServiceQuery)
+}
+
+test_dump_result = {
+    "test_resource": {
+        "test_project_1": [
+            {"name": "test_name1", "id": "test_id1", "test_field1": "test_value1"},
+            {"name": "test_name2", "id": "test_id2", "test_field2": "test_value2"}
+        ],
+        "test_project_2": [
+            {"name": "test_name1", "id": "test_id1", "test_field3": "test_value3"},
+            {"name": "test_name2", "id": "test_id2", "test_field4": "test_value2"}
+        ]
+    }
 }
