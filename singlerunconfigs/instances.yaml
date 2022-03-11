@@ -1,0 +1,19 @@
+serviceName: compute
+version: v1
+queries:
+  - resource: instances
+    gcp_api_call: instances.aggregatedList
+    gcp_function_args:
+      project: <PROJECT_ID>
+      filter: networkInterfaces.accessConfigs.natIP!=''
+#      filter: canIpForward=true
+    gcp_log_resource_type: None
+#    field_exclude_filter:
+#      - creationTimestamp
+#      - id
+#      - kind
+#      - selfLink
+    field_include_filter:
+      - name
+      - networkInterfaces:
+          - networkIP
