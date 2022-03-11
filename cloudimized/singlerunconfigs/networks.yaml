@@ -14,5 +14,5 @@ queries:
     item_exclude_filter:
       - peerings:
           name: "servicenetworking-googleapis-com"
-      - subnetworks: ".*europe-west[89].*"
+#      - subnetworks: ".*europe-west[89].*"
 

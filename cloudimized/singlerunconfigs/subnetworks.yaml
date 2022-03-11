@@ -8,6 +8,6 @@ queries:
     gcp_log_resource_type: gce_subnetwork
     field_exclude_filter:
       - stackType
-    item_exclude_filter:
-      - region: ".*(europe-west[89]|asia-south1).*"
+#    item_exclude_filter:
+#      - region: ".*(europe-west[89]|asia-south1).*"
 

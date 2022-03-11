@@ -163,7 +163,8 @@ class GcpOxidizer:
         :param resource_name: GCP resource name to scan
         """
         try:
-            filename = f"{SINGLE_RUN_CONFIGS_DIR}/{resource_name}.yaml"
+            script_dir, _ = os.path.split(__file__)
+            filename = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}/{resource_name}.yaml"
             with open(filename) as fh:
                 service = yaml.safe_load(fh)
         except yaml.YAMLError as e:
