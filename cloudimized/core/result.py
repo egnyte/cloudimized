@@ -4,7 +4,7 @@ from typing import List, Dict
 from pathlib import Path
 from os.path import isdir
 
-from gcpcore.gcpservicequery import GcpServiceQuery
+from cloudimized.gcpcore.gcpservicequery import GcpServiceQuery
 
 logger = logging.getLogger(__name__)
 

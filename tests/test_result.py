@@ -1,7 +1,7 @@
 import unittest
 import mock
-from core.result import QueryResult, QueryResultError, set_query_results_from_configuration
-from gcpcore.gcpservicequery import GcpServiceQuery
+from cloudimized.core.result import QueryResult, QueryResultError, set_query_results_from_configuration
+from cloudimized.gcpcore.gcpservicequery import GcpServiceQuery
 
 
 class QueryResultTestCase(unittest.TestCase):
@@ -64,7 +64,7 @@ class QueryResultTestCase(unittest.TestCase):
         projects = resources["test_resource"]
         self.assertEqual(len(projects), 0)
 
-    @mock.patch("core.result.isdir")
+    @mock.patch("cloudimized.core.result.isdir")
     def test_dump_results_not_directory(self, mock_isdir):
         mock_isdir.return_value = False
         with self.assertRaises(QueryResultError) as cm:
@@ -72,8 +72,8 @@ class QueryResultTestCase(unittest.TestCase):
         self.assertEqual("Issue dumping results to files. Directory 'test_directory' doesn't exist",
                          str(cm.exception))
 
-    @mock.patch("core.result.Path")
-    @mock.patch("core.result.isdir")
+    @mock.patch("cloudimized.core.result.Path")
+    @mock.patch("cloudimized.core.result.isdir")
     def test_dump_results_issue_creating_subdirectory(self, mock_isdir, mock_path):
         mock_isdir.return_value = True
         mock_mkdir = mock.MagicMock()
@@ -86,8 +86,8 @@ class QueryResultTestCase(unittest.TestCase):
                          str(cm.exception))
 
     @mock.patch("builtins.open")
-    @mock.patch("core.result.Path")
-    @mock.patch("core.result.isdir")
+    @mock.patch("cloudimized.core.result.Path")
+    @mock.patch("cloudimized.core.result.isdir")
     def test_dump_results_issue_creating_files(self, mock_isdir, mock_path, mock_open):
         mock_isdir.return_value = True
         mock_open.side_effect = Exception("issue opening file")
@@ -97,10 +97,10 @@ class QueryResultTestCase(unittest.TestCase):
         self.assertEqual("Issue dumping results into file 'test_directory/test_resource/test_project.yaml",
                          str(cm.exception))
 
-    @mock.patch("core.result.yaml.dump")
+    @mock.patch("cloudimized.core.result.yaml.dump")
     @mock.patch("builtins.open")
-    @mock.patch("core.result.Path")
-    @mock.patch("core.result.isdir")
+    @mock.patch("cloudimized.core.result.Path")
+    @mock.patch("cloudimized.core.result.isdir")
     def test_dump_results_issue_creating_files(self, mock_isdir, mock_path, mock_b_open, mock_dump):
         mock_isdir.return_value = True
         mock_temp = mock.MagicMock()
@@ -112,10 +112,10 @@ class QueryResultTestCase(unittest.TestCase):
         mock_b_open.assert_called_with("test_directory/test_resource/test_project.yaml", "w")
         mock_dump.assert_called_with(test_result, mock_temp, default_flow_style=False)
 
-    @mock.patch("core.result.yaml.dump")
+    @mock.patch("cloudimized.core.result.yaml.dump")
     @mock.patch("builtins.open")
-    @mock.patch("core.result.Path")
-    @mock.patch("core.result.isdir")
+    @mock.patch("cloudimized.core.result.Path")
+    @mock.patch("cloudimized.core.result.isdir")
     def test_dump_results_empty_list_result(self, mock_isdir, mock_path, mock_b_open, mock_dump):
         mock_isdir.return_value = True
         mock_temp = mock.MagicMock()

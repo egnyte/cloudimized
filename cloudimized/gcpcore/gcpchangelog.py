@@ -2,7 +2,7 @@ import logging
 
 from typing import List
 from datetime import datetime, timedelta
-from gcpcore.gcpquery import GcpQuery
+from cloudimized.gcpcore.gcpquery import GcpQuery
 from google.cloud import logging as gcp_logging
 
 logger = logging.getLogger(__name__)

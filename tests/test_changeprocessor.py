@@ -5,13 +5,13 @@ import datetime as dt
 
 import time_machine
 
-from core.changeprocessor import ChangeProcessor, ChangeProcessorError, configure_change_processor
-from gitcore.repo import GitRepo
-from gitcore.gitchange import GitChange
-from gcpcore.gcpquery import GcpQuery
-from gcpcore.gcpchangelog import GcpChangeLog
-from tfcore.query import TFQuery, TFQueryError
-from tfcore.run import TFRun
+from cloudimized.core.changeprocessor import ChangeProcessor, ChangeProcessorError, configure_change_processor
+from cloudimized.gitcore.repo import GitRepo
+from cloudimized.gitcore.gitchange import GitChange
+from cloudimized.gcpcore.gcpquery import GcpQuery
+from cloudimized.gcpcore.gcpchangelog import GcpChangeLog
+from cloudimized.tfcore.query import TFQuery, TFQueryError
+from cloudimized.tfcore.run import TFRun
 
 
 class ChangeProcessorTestCase(unittest.TestCase):
@@ -52,6 +52,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
             "test_resource" : mock.MagicMock(spec=GcpQuery)
         }
 
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
+
     def test_process_add_error(self):
         self.processor.repo.repo.git.add.side_effect = Exception("test_error")
         with self.assertRaises(ChangeProcessorError) as cm:
@@ -60,7 +63,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_not_called()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_non_change(self, mock_getchangelogs):
         self.processor.repo.repo.index.diff.return_value = False
         self.processor.repo.repo.iter_commits.return_value = []
@@ -69,7 +72,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_not_called()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_empty_repo_case(self, mock_getchangelogs):
         self.processor.repo.repo.index.diff.side_effect = Exception("test issue")
         self.processor.repo.repo.iter_commits.side_effect = Exception("test issue #2")
@@ -84,7 +87,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_empty_repo_case_with_commit_count_error(self, mock_getchangelogs):
         self.processor.repo.repo.index.diff.side_effect = Exception("test issue")
         self.processor.repo.repo.iter_commits.side_effect = Exception("test issue #2")
@@ -99,7 +102,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_getchangelogs_error(self, mock_getchangelogs):
         mock_getchangelogs.side_effect = Exception("test error")
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
@@ -113,7 +116,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_no_gcp_logs_found(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         mock_getchangelogs.return_value = []
@@ -124,7 +127,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_missing_changer_in_gcp_log(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         gcp_change_log_mock1 = mock.MagicMock(spec=GcpChangeLog)
@@ -140,7 +143,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_parsing_login_error(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         gcp_change_log_mock1 = mock.MagicMock(spec=GcpChangeLog)
@@ -156,7 +159,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_parsing_manual_change(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         gcp_change_log_mock1 = mock.MagicMock(spec=GcpChangeLog)
@@ -172,7 +175,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_parsing_gcp_logs_with_same_changer(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_changer"]
         gcp_change_log_mock1 = mock.MagicMock(spec=GcpChangeLog)
@@ -190,7 +193,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_get_runs_error(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         gcp_change_log_mock1 = mock.MagicMock(spec=GcpChangeLog)
@@ -208,7 +211,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_skip_ticket_processing(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         self.processor.ticket_regex = None
@@ -231,8 +234,8 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.re")
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.re")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_with_ticket_processing_error(self, mock_getchangelogs, mock_re):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         gcp_change_log_mock1 = mock.MagicMock(spec=GcpChangeLog)
@@ -255,7 +258,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
-    @mock.patch("core.changeprocessor.getChangeLogs")
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
     def test_process_with_ticket_processing(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         gcp_change_log_mock1 = mock.MagicMock(spec=GcpChangeLog)
@@ -382,7 +385,7 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.assertEqual("Incorrect type of repo parameter. Should be GitRepo, is <class 'str'>",
                          str(cm.exception))
 
-    @mock.patch("core.changeprocessor.configure_tfquery")
+    @mock.patch("cloudimized.core.changeprocessor.configure_tfquery")
     def test_configure_tfquery_type_error(self, mock_tfquery):
         mock_tfquery.return_value = "incorrect_type"
         with self.assertRaises(ChangeProcessorError) as cm:

@@ -1,9 +1,10 @@
 import logging
 import re
 from typing import Dict, Any
+
 from jira import JIRA
 
-from gitcore.gitchange import GitChange
+from cloudimized.gitcore.gitchange import GitChange
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ ISSUETYPE = "issueType"
 FIELDS = "fields"
 FILTERSET = "filterSet"
 PROJECTIDFILTER = "projectId"
+
 
 class JiraNotifier:
     """
@@ -49,11 +51,11 @@ class JiraNotifier:
         """
         Creates Jira issue for Git Change
         """
-        #Skip for non-manual changes
+        # Skip for non-manual changes
         if not change.manual:
             logger.info("Skiping ticket creation for non-manual change")
             return
-        #Skip for non-matching projects
+        # Skip for non-matching projects
         if self.filter_set:
             if not re.match(rf"{self.filter_set.get(PROJECTIDFILTER)}", change.project):
                 logger.info("Skipping ticket creation for non-matching project id")

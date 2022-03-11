@@ -53,15 +53,13 @@ On each execution Cloudimized performs following actions:
 
 ## Installation
 
-1. Currently Cloudimized is installed via git clone
+1. Install Cloudimized with [pipx](https://github.com/pypa/pipx) (recommended) or plain pip.
 
 ```
-git clone https://github.com/egnyte/cloudimized.git
+pipx install cloudimized
 ```
 
-2. Install packages from requirements.txt
-
-3. Cloudimized for operation requires Git repo for storing GCP configuration files.
+2. Cloudimized for operation requires Git repo for storing GCP configuration files.
    1. Set-up empty Git repo in remote location i.e. GitHub or GitLab
 
 ## Running

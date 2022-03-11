@@ -1,0 +1,35 @@
+name: Tests
+
+# trigger only on pushes to main OR PRs to main
+# to prevent double tests on our own
+# PRs within egnyte/cloudimized repo from a feature
+# branch to main
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5
+      matrix:
+        python-version: [3.7, 3.8, 3.9, "3.10"]
+      fail-fast : false
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies & test dependencies
+        run: |
+          pip install -e .[test]
+      - name: Run unit tests
+        run: |
+          python -m unittest discover tests

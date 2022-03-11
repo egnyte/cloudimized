@@ -5,7 +5,7 @@ from typing import List, Dict
 from os.path import exists, isdir, join
 from os import listdir
 from shutil import rmtree
-from gitcore.gitchange import GitChange
+from cloudimized.gitcore.gitchange import GitChange
 from os.path import basename, dirname
 
 logger = logging.getLogger(__name__)
