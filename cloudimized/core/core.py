@@ -59,7 +59,10 @@ class GcpOxidizer:
             self.config_file,
             self.loglevel,
             self.singlerun,
-            self.output
+            self.output,
+            self.list,
+            self.describe,
+            self.name
         ) = self.parse_args()
         self.gcp_services = None
         self.gcp_type_queries_map = {}
@@ -73,6 +76,11 @@ class GcpOxidizer:
         if not self.singlerun:
             self.parse_config_file()
         else:
+            if self.list:
+                self.list_singlerun_configs()
+                sys.exit(0)
+            if self.describe:
+                if not name:
             self.set_single_run(resource_name=self.singlerun)
             self.set_logging(self.loglevel)
 
@@ -83,7 +91,10 @@ class GcpOxidizer:
         parser.add_argument("-l", "--loglevel", default="INFO", help="Set logging level",
                             choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"])
         singlerun_group = parser.add_argument_group('Single Run Mode')
-        singlerun_group.add_argument("-s", "--singlerun", type=str, help="Resource name to scan")
+        singlerun_group.add_argument("-s", "--singlerun", action="store_true", help="Scan & dump files mode")
+        singlerun_group.add_argument("--list", action="store_true", help="List single run configs")
+        singlerun_group.add_argument("-d", "--describe", action="store_true", help="Print single run config")
+        singlerun_group.add_argument("-n", "--name", type=str, help="Name of single run config")
         singlerun_group.add_argument("-o", "--output", default="yaml", choices=["yaml", "csv"],
                                      help="Output file format")
         args = parser.parse_args()
@@ -91,8 +102,31 @@ class GcpOxidizer:
             args.config,
             args.loglevel,
             args.singlerun,
-            args.output
+            args.output,
+            args.list,
+            args.describe,
+            args.name
         )
+
+    def list_singlerun_configs(self):
+        try:
+            script_dir, _ = os.path.split(__file__)
+            configs_dir = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}"
+            all_files = [f.split(".")[0] for f in os.listdir(configs_dir)
+                         if os.path.isfile(os.path.join(configs_dir, f))]
+            print(f"Available single run configs:\n{all_files}")
+        except Exception as e:
+            print(f"Issue discovering singe run configs\n{str(e)}")
+
+    def describe_singlerun_configs(self, config_name: str):
+        try:
+            script_dir, _ = os.path.split(__file__)
+            configs_dir = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}"
+            filename = f"{configs_dir}/{config_name}.yaml"
+            with open(filename, 'r') as fh:
+                print(fh.read())
+        except Exception as e:
+            print(f"Issue discovering singe run configs\n{str(e)}")
 
     def parse_config_file(self) -> None:
         """
