@@ -303,10 +303,10 @@ functions (no Git, Terraform, Slack, Jira interaction and no GCP logs lookup).
 ### Running
 
 ```yaml
-python3 main.py --singlerun/-s <RESOURCE_NAME> --output/-o {yaml, csv}
+cloudimized --singlerun/-s <RESOURCE_NAME> --output/-o {yaml, csv}
 
 i.e
-python3 main.py -s addresses -o csv
+cloudimized -s addresses -o csv
 ```
 
 ### Configuration
