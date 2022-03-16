@@ -5,7 +5,7 @@ monitoring changes of selected resources.
 
 Cloudimized performs similar function as Oxidized, but for Cloud environment.
 
-![Example Slack notification when using all optional features, including a git diff of the change](cloudimized-example.png)
+![Example Slack notification when using all optional features, including a git diff of the change](https://raw.githubusercontent.com/egnyte/cloudimized/main/cloudimized-example.png)
 
 ## Overview
 
@@ -70,7 +70,7 @@ After installation:
    1. This can be achieved via number of ways i.e.
       1. via cron
       2. via automation server
-   2. Execute with `python3 main.py -c <PATH_TO_FILE>/config.yaml`
+   2. Execute with `cloudimized -c <PATH_TO_FILE>/config.yaml`
 
 ## Configuration
 
