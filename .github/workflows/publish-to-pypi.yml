@@ -4,7 +4,8 @@ name: Publish 🐍 to PyPI
 on:
   push:
     tags:
-      - 'v*rc*'
+      - 'v*'
+      - '!v*rc*'
 
 jobs:
   build-n-publish:
@@ -19,19 +20,18 @@ jobs:
         run: |
           pip install wheel
           python setup.py build sdist bdist_wheel
-      - name: Publish distribution 📦 to Test PyPI
+      - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@v1.4.1
         with:
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
-#      - name: Create release in GitHub
-#        id: create_release
-#        uses: actions/create-release@v1
-#        env:
-#          # This token is provided by Actions, you do not need to create your own token
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          tag_name: ${{ github.ref }}
-#          release_name: ${{ github.ref }}
-#          draft: false
-#          prerelease: false
+          password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Create release in GitHub
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          # This token is provided by Actions, you do not need to create your own token
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
