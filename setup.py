@@ -26,7 +26,7 @@ setup(
         "Operating System :: MacOS",
     ],
     packages=find_packages(),
-    package_data={"": ["LICENSE", "*.md", "config-example.yml"]},
+    package_data={"": ["LICENSE", "*.md", "config-example.yml", "cloudimized/singlerunconfigs/*.yaml"]},
     include_package_data=True,
     install_requires=[
         'cachetools==4.2.4',
