@@ -58,11 +58,11 @@ class GcpOxidizer:
         (
             self.config_file,
             self.loglevel,
-            self.singlerun,
-            self.output,
-            self.list,
-            self.describe,
-            self.name
+            self.arg_singlerun,
+            self.arg_output,
+            self.arg_list,
+            self.arg_describe,
+            self.arg_name
         ) = self.parse_args()
         self.gcp_services = None
         self.gcp_type_queries_map = {}
@@ -73,15 +73,15 @@ class GcpOxidizer:
         self.projects = None
         self.run_results = None
         self.change_processor = None
-        if not self.singlerun:
+        if not self.arg_singlerun:
             self.parse_config_file()
         else:
-            if self.list:
+            if self.arg_list:
                 self.list_singlerun_configs()
                 sys.exit(0)
-            if self.describe:
-                if not name:
-            self.set_single_run(resource_name=self.singlerun)
+            # if self.describe:
+            #     if not name:
+            self.set_single_run(resource_name=self.arg_name)
             self.set_logging(self.loglevel)
 
     def parse_args(self):
@@ -98,6 +98,9 @@ class GcpOxidizer:
         singlerun_group.add_argument("-o", "--output", default="yaml", choices=["yaml", "csv"],
                                      help="Output file format")
         args = parser.parse_args()
+        # Name has to be set if running singlerun (except listing)
+        if (args.singlerun == True and args.list == False and args.name is None):
+            parser.error("--name is required in singlerun mode")
         return (
             args.config,
             args.loglevel,
@@ -284,9 +287,9 @@ class GcpOxidizer:
         self.run_queries()
         # Dump results to files
         try:
-            if self.output == "csv":
+            if self.arg_output == "csv":
                 self.run_results.dump_results_csv(directory=".")
-            elif self.output == "yaml":
+            elif self.arg_output == "yaml":
                 self.run_results.dump_results(directory=".")
         except QueryResultError as e:
             logger.critical(f"Issue during dumping results to local files\n{e}\n{e.__cause__}")
@@ -340,7 +343,7 @@ def execute():
     except GcpOxidizerConfigException as e:
         logger.critical(f"Error in GcpOxidizer configuration\n{e}\n{e.__cause__}")
         sys.exit(1)
-    if not gcpoxidizer.singlerun:
+    if not gcpoxidizer.arg_singlerun:
         logger.info("Running in main mode")
         gcpoxidizer.main_mode()
     else:
