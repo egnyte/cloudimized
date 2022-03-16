@@ -79,8 +79,9 @@ class GcpOxidizer:
             if self.arg_list:
                 self.list_singlerun_configs()
                 sys.exit(0)
-            # if self.describe:
-            #     if not name:
+            if self.arg_describe:
+                self.describe_singlerun_configs(self.arg_name)
+                sys.exit(0)
             self.set_single_run(resource_name=self.arg_name)
             self.set_logging(self.loglevel)
 
@@ -126,6 +127,7 @@ class GcpOxidizer:
             script_dir, _ = os.path.split(__file__)
             configs_dir = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}"
             filename = f"{configs_dir}/{config_name}.yaml"
+            print(f"Config file: {filename}\n")
             with open(filename, 'r') as fh:
                 print(fh.read())
         except Exception as e:
