@@ -6,10 +6,10 @@ queries:
     gcp_function_args:
       project: <PROJECT_ID>
       filter: addressType=EXTERNAL
-    gcp_log_resource_type: None
-#    field_exclude_filter:
-#      - id
+    gcp_log_resource_type: None #non-applicable
     field_include_filter:
       - address
       - name
       - status
+#    field_exclude_filter:
+#      - id

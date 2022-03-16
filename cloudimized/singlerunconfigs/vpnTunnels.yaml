@@ -6,9 +6,14 @@ queries:
     gcp_function_args:
       project: <PROJECT_ID>
 #      filter: status!=ESTABLISHED
-    gcp_log_resource_type: None
-    field_include_filter:
-      - name
-      - region
-      - status
-      - detailedStatus
+    gcp_log_resource_type: None #non-applicable
+#    field_include_filter:
+#      - name
+#      - region
+#      - status
+#      - detailedStatus
+    field_exclude_filter:
+      - creationTimestamp
+      - localTrafficSelector
+      - sharedSecret
+      - sharedSecretHash

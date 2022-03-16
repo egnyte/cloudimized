@@ -3,9 +3,15 @@ version: v1
 queries:
   - resource: forwardingRules
     gcp_api_call: forwardingRules.aggregatedList
-    gcp_log_resource_type: None
     gcp_function_args:
       project: <PROJECT_ID>
+#      filter:
+    gcp_log_resource_type: None #non-applicable
+#    field_include_filter:
+#      - address
+#      - name
+#      - region
+#      - status
     field_exclude_filter:
       - creationTimestamp
       - fingerprint
@@ -13,8 +19,3 @@ queries:
       - kind
       - labelFingerprint
       - selfLink
-#    field_include_filter:
-#      - address
-#      - name
-#      - region
-#      - status

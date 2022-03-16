@@ -5,7 +5,10 @@ queries:
     gcp_api_call: subnetworks.aggregatedList
     gcp_function_args:
       project: <PROJECT_ID>
-    gcp_log_resource_type: gce_subnetwork
+#      filter:
+    gcp_log_resource_type: None #non-applicable
+#    field_include_filter:
+#      - name
     field_exclude_filter:
       - stackType
 #    item_exclude_filter:

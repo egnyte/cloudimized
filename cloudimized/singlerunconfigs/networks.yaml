@@ -5,7 +5,10 @@ queries:
     gcp_api_call: networks.list
     gcp_function_args:
       project: <PROJECT_ID>
-    gcp_log_resource_type: gce_network
+#      filter:
+    gcp_log_resource_type: None #non-applicable
+#    field_include_filter:
+#      - name
     field_exclude_filter:
       - selfLinkWithId
       - networkFirewallPolicyEnforcementOrder
@@ -15,4 +18,3 @@ queries:
       - peerings:
           name: "servicenetworking-googleapis-com"
 #      - subnetworks: ".*europe-west[89].*"
-
