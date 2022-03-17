@@ -114,8 +114,8 @@ class GcpOxidizer:
 
     def list_singlerun_configs(self):
         try:
-            script_dir, _ = os.path.split(__file__)
-            configs_dir = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}"
+            script_dir = os.path.dirname(__file__)
+            configs_dir = os.path.abspath(f"{script_dir}/../../{SINGLE_RUN_CONFIGS_DIR}")
             all_files = [f.split(".")[0] for f in os.listdir(configs_dir)
                          if os.path.isfile(os.path.join(configs_dir, f))]
             print(f"Available single run configs:\n{all_files}")
@@ -124,9 +124,9 @@ class GcpOxidizer:
 
     def describe_singlerun_configs(self, config_name: str):
         try:
-            script_dir, _ = os.path.split(__file__)
-            configs_dir = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}"
-            filename = f"{configs_dir}/{config_name}.yaml"
+            script_dir = os.path.dirname(__file__)
+            configs_dir = f"{script_dir}/../../{SINGLE_RUN_CONFIGS_DIR}"
+            filename = os.path.abspath(f"{configs_dir}/{config_name}.yaml")
             print(f"Config file: {filename}\n")
             with open(filename, 'r') as fh:
                 print(fh.read())
