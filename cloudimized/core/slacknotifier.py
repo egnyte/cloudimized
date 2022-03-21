@@ -2,7 +2,7 @@ import logging
 from slack_sdk import WebClient
 from typing import Dict, Any
 
-from gitcore.gitchange import GitChange
+from cloudimized.gitcore.gitchange import GitChange
 
 logger = logging.getLogger(__name__)
 

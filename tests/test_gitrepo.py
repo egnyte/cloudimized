@@ -1,16 +1,16 @@
 import unittest
 import mock
 
-import gitcore.repo as repo
-from gitcore.repo import GitRepo, GitRepoError, configure_repo
-from gitcore.gitchange import GitChange
+import cloudimized.gitcore.repo as repo
+from cloudimized.gitcore.repo import GitRepo, GitRepoError, configure_repo
+from cloudimized.gitcore.gitchange import GitChange
 
 class GitRepoCase(unittest.TestCase):
     def setUp(self) -> None:
         self.gitrepo = GitRepo("user", "password", "https://example.com/test/repo.git", "localRepo")
 
-    @mock.patch("gitcore.repo.git")
-    @mock.patch("gitcore.repo.exists")
+    @mock.patch("cloudimized.gitcore.repo.git")
+    @mock.patch("cloudimized.gitcore.repo.exists")
     def test_setup_local_exists(self, mock_exists, mock_git):
         mock_exists.return_value = True
         # Fetching remote
@@ -22,16 +22,16 @@ class GitRepoCase(unittest.TestCase):
             mock_git.Repo().remotes.origin.fetch.side_effect = Exception()
             self.gitrepo.setup()
 
-    @mock.patch("gitcore.repo.git")
-    @mock.patch("gitcore.repo.exists")
+    @mock.patch("cloudimized.gitcore.repo.git")
+    @mock.patch("cloudimized.gitcore.repo.exists")
     def test_setup_ssh_cloning(self, mock_exists, mock_git):
         mock_exists.return_value = False
         self.gitrepo.repo_url = "git@git.example.com:test/repo.git"
         self.gitrepo.setup()
         mock_git.Repo.clone_from.assert_called_with("git@git.example.com:test/repo.git", "localRepo")
 
-    @mock.patch("gitcore.repo.git")
-    @mock.patch("gitcore.repo.exists")
+    @mock.patch("cloudimized.gitcore.repo.git")
+    @mock.patch("cloudimized.gitcore.repo.exists")
     def test_setup_https_cloning(self, mock_exists, mock_git):
         mock_exists.return_value = False
         # Test correct url with creds
@@ -112,7 +112,7 @@ class GitRepoCase(unittest.TestCase):
         self.gitrepo.push_changes()
         repo_mock.remotes.origin.push.called_once()
 
-    @mock.patch("gitcore.repo.GitRepo", spec=GitRepo)
+    @mock.patch("cloudimized.gitcore.repo.GitRepo", spec=GitRepo)
     def test_configure_repo(self, mock_gitrepo):
         # Missing username
         with self.assertRaises(repo.GitRepoConfigError):
@@ -134,16 +134,16 @@ class GitRepoCase(unittest.TestCase):
         self.assertIsInstance(result, GitRepo)
         mock_gitrepo.assert_called_with("test_user", "secret", "test_url", "/local/dir")
 
-    @mock.patch("gitcore.repo.rmtree")
-    @mock.patch("gitcore.repo.listdir")
+    @mock.patch("cloudimized.gitcore.repo.rmtree")
+    @mock.patch("cloudimized.gitcore.repo.listdir")
     def test_clean_repo_not_setup(self, mock_listdir, mock_rmtree):
         with self.assertRaises(GitRepoError) as cm:
             self.gitrepo.clean_repo()
         self.assertEqual("Repo 'https://example.com/test/repo.git' needs to be setup first",
                          str(cm.exception))
 
-    @mock.patch("gitcore.repo.rmtree")
-    @mock.patch("gitcore.repo.listdir")
+    @mock.patch("cloudimized.gitcore.repo.rmtree")
+    @mock.patch("cloudimized.gitcore.repo.listdir")
     def test_clean_repo_listing_issue(self, mock_listdir, mock_rmtree):
         self.gitrepo.repo = mock.MagicMock()
         mock_listdir.side_effect = Exception("issue")
@@ -152,9 +152,9 @@ class GitRepoCase(unittest.TestCase):
         self.assertEqual("Issue retrieving directories in directory 'localRepo'",
                          str(cm.exception))
 
-    @mock.patch("gitcore.repo.isdir")
-    @mock.patch("gitcore.repo.rmtree")
-    @mock.patch("gitcore.repo.listdir")
+    @mock.patch("cloudimized.gitcore.repo.isdir")
+    @mock.patch("cloudimized.gitcore.repo.rmtree")
+    @mock.patch("cloudimized.gitcore.repo.listdir")
     def test_clean_repo_remove_issue(self, mock_listdir, mock_rmtree, mock_isdir):
         self.gitrepo.repo = mock.MagicMock()
         mock_listdir.return_value = ["test_directory1", "test_directory2"]
@@ -165,9 +165,9 @@ class GitRepoCase(unittest.TestCase):
         self.assertEqual("Issue removing directories in 'localRepo'",
                          str(cm.exception))
 
-    @mock.patch("gitcore.repo.isdir")
-    @mock.patch("gitcore.repo.rmtree")
-    @mock.patch("gitcore.repo.listdir")
+    @mock.patch("cloudimized.gitcore.repo.isdir")
+    @mock.patch("cloudimized.gitcore.repo.rmtree")
+    @mock.patch("cloudimized.gitcore.repo.listdir")
     def test_clean_repo_only_git_folder(self, mock_listdir, mock_rmtree, mock_isdir):
         self.gitrepo.repo = mock.MagicMock()
         mock_listdir.return_value = [".git"]
@@ -175,9 +175,9 @@ class GitRepoCase(unittest.TestCase):
         self.gitrepo.clean_repo()
         mock_rmtree.assert_not_called()
 
-    @mock.patch("gitcore.repo.isdir")
-    @mock.patch("gitcore.repo.rmtree")
-    @mock.patch("gitcore.repo.listdir")
+    @mock.patch("cloudimized.gitcore.repo.isdir")
+    @mock.patch("cloudimized.gitcore.repo.rmtree")
+    @mock.patch("cloudimized.gitcore.repo.listdir")
     def test_clean_repo_success(self, mock_listdir, mock_rmtree, mock_isdir):
         self.gitrepo.repo = mock.MagicMock()
         mock_listdir.return_value = [".git", "test_directory1", "test_directory2", "README.md"]

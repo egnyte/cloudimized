@@ -1,14 +1,15 @@
 import logging
 import re
-from typing import Dict, List, Any
 from datetime import datetime
-from tfcore.query import TFQuery, TFQueryError, configure_tfquery
-from gitcore.repo import GitRepo
-from gitcore.gitchange import GitChange
-from gcpcore.gcpquery import GcpQuery
-from gcpcore.gcpchangelog import getChangeLogs
-from core.slacknotifier import SlackNotifier, SlackNotifierError, configure_slack_notifier
-from core.jiranotifier import JiraNotifier, JiraNotifierError, configure_jiranotifier
+from typing import Dict, List, Any
+
+from cloudimized.core.jiranotifier import JiraNotifier, JiraNotifierError, configure_jiranotifier
+from cloudimized.core.slacknotifier import SlackNotifier, SlackNotifierError, configure_slack_notifier
+from cloudimized.gcpcore.gcpchangelog import getChangeLogs
+from cloudimized.gcpcore.gcpquery import GcpQuery
+from cloudimized.gitcore.gitchange import GitChange
+from cloudimized.gitcore.repo import GitRepo
+from cloudimized.tfcore.query import TFQuery, TFQueryError, configure_tfquery
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ TICKET_SYS_URL = "ticket_sys_url"
 TERRAFORM_SECTION = "terraform"
 SLACK_SECTION = "slack"
 JIRA_SECTION = "jira"
+
 
 class ChangeProcessor:
     """
@@ -62,7 +64,7 @@ class ChangeProcessor:
         :param git_change: change detected by Git
         :param change_time: time of scan start/finish
         """
-        #TODO: implement better time selection
+        # TODO: implement better time selection
         message = f"{git_change.resource_type.title()} updated in {git_change.project}"
         manual_change = False
         skip_process_ticket = False
@@ -149,7 +151,7 @@ class ChangeProcessor:
                                     logger.warning(f"Issue retrieving ticket number from "
                                                    f"run '{tf_run}'\n{e}\n{e.__cause__}")
                                     continue
-                                #TODO Parametrize string replacement
+                                # TODO Parametrize string replacement
                                 message += f"\n Related ticket {self.ticket_sys_url}/{ticket.replace('_', '-')}"
         # Add least one changer has been identified
         if changers:

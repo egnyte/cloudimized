@@ -1,0 +1,15 @@
+serviceName: compute
+version: v1
+queries:
+  - resource: globalAddresses
+    gcp_api_call: globalAddresses.list
+    gcp_function_args:
+      project: <PROJECT_ID>
+      filter: addressType=EXTERNAL
+    gcp_log_resource_type: None #non-applicable
+    field_include_filter:
+      - address
+      - name
+      - status
+#    field_exclude_filter:
+#      - id

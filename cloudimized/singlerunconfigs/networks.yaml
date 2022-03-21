@@ -1,0 +1,20 @@
+serviceName: compute
+version: v1
+queries:
+  - resource: networks
+    gcp_api_call: networks.list
+    gcp_function_args:
+      project: <PROJECT_ID>
+#      filter:
+    gcp_log_resource_type: None #non-applicable
+#    field_include_filter:
+#      - name
+    field_exclude_filter:
+      - selfLinkWithId
+      - networkFirewallPolicyEnforcementOrder
+      - peerings:
+          - stateDetails
+    item_exclude_filter:
+      - peerings:
+          name: "servicenetworking-googleapis-com"
+#      - subnetworks: ".*europe-west[89].*"

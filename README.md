@@ -5,7 +5,7 @@ monitoring changes of selected resources.
 
 Cloudimized performs similar function as Oxidized, but for Cloud environment.
 
-![Example Slack notification when using all optional features, including a git diff of the change](cloudimized-example.png)
+![Example Slack notification when using all optional features, including a git diff of the change](https://raw.githubusercontent.com/egnyte/cloudimized/main/cloudimized-example.png)
 
 ## Overview
 
@@ -53,15 +53,13 @@ On each execution Cloudimized performs following actions:
 
 ## Installation
 
-1. Currently Cloudimized is installed via git clone
+1. Install Cloudimized with [pipx](https://github.com/pypa/pipx) (recommended) or plain pip.
 
 ```
-git clone https://github.com/egnyte/cloudimized.git
+pipx install cloudimized
 ```
 
-2. Install packages from requirements.txt
-
-3. Cloudimized for operation requires Git repo for storing GCP configuration files.
+2. Cloudimized for operation requires Git repo for storing GCP configuration files.
    1. Set-up empty Git repo in remote location i.e. GitHub or GitLab
 
 ## Running
@@ -72,7 +70,7 @@ After installation:
    1. This can be achieved via number of ways i.e.
       1. via cron
       2. via automation server
-   2. Execute with `python3 main.py -c <PATH_TO_FILE>/config.yaml`
+   2. Execute with `cloudimized -c <PATH_TO_FILE>/config.yaml`
 
 ## Configuration
 
@@ -296,3 +294,38 @@ change_processor:
         # Terraform workspaces list
         workspace: ["my-workspace-no1"]       
 ```
+
+## Single run mode
+
+Allows to run cloudimized only to scan given resource and dump them into text files, without performing and additional
+functions (no Git, Terraform, Slack, Jira interaction and no GCP logs lookup).
+
+### Running
+
+```
+cloudimized --singlerun/-s <RESOURCE_NAME> --output/-o {yaml, csv}
+
+i.e
+cloudimized -s addresses -o csv
+```
+
+### Configuration
+
+Resource configurations for single run (**<RESOURCE_NAME>** parameter) to be scanned are stored in **singlerunconfigs**
+directory and are selected based on filename. Resource configuration is the same as in main config file. Additional
+singe run mode configs can be added to folder as needed.
+
+Get info available configs or what will be run with <RESOURCE_NAME> with:
+
+```
+cloudimized -s --list
+cloudimized -s --describe --name <RESOURCE_NAME>
+```
+
+### Output
+
+By default script will dump results in YAML format same as in main mode. If chosen it can dump results in CSV file
+format (single file per resource).
+
+**LIMITATION:** Currently output in csv format doesn't support nested structures, it will fail if there is a list or
+dictionary in result. Therefore, selecting specific fields for each resource is needed.

@@ -1,0 +1,19 @@
+serviceName: compute
+version: v1
+queries:
+  - resource: addresses
+    gcp_api_call: addresses.aggregatedList
+    gcp_function_args:
+      project: <PROJECT_ID>
+#      filter: addressType=EXTERNAL
+    gcp_log_resource_type: None #non-applicable
+    field_include_filter:
+      - address
+      - name
+      - region
+      - status
+#    field_exclude_filter:
+#      - creationTimestamp
+#      - id
+#      - kind
+#      - selfLink

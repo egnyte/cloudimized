@@ -1,0 +1,16 @@
+serviceName: compute
+version: v1
+queries:
+  - resource: subnetworks
+    gcp_api_call: subnetworks.aggregatedList
+    gcp_function_args:
+      project: <PROJECT_ID>
+#      filter:
+    gcp_log_resource_type: None #non-applicable
+#    field_include_filter:
+#      - name
+    field_exclude_filter:
+      - stackType
+#    item_exclude_filter:
+#      - region: ".*(europe-west[89]|asia-south1).*"
+
