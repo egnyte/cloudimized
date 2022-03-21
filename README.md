@@ -302,7 +302,7 @@ functions (no Git, Terraform, Slack, Jira interaction and no GCP logs lookup).
 
 ### Running
 
-```yaml
+```
 cloudimized --singlerun/-s <RESOURCE_NAME> --output/-o {yaml, csv}
 
 i.e
@@ -314,6 +314,13 @@ cloudimized -s addresses -o csv
 Resource configurations for single run (**<RESOURCE_NAME>** parameter) to be scanned are stored in **singlerunconfigs**
 directory and are selected based on filename. Resource configuration is the same as in main config file. Additional
 singe run mode configs can be added to folder as needed.
+
+Get info available configs or what will be run with <RESOURCE_NAME> with:
+
+```
+cloudimized -s --list
+cloudimized -s --describe --name <RESOURCE_NAME>
+```
 
 ### Output
 
