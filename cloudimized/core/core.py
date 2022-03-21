@@ -115,7 +115,7 @@ class GcpOxidizer:
     def list_singlerun_configs(self):
         try:
             script_dir = os.path.dirname(__file__)
-            configs_dir = os.path.abspath(f"{script_dir}/../../{SINGLE_RUN_CONFIGS_DIR}")
+            configs_dir = os.path.abspath(f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}")
             all_files = [f.split(".")[0] for f in os.listdir(configs_dir)
                          if os.path.isfile(os.path.join(configs_dir, f))]
             print(f"Available single run configs:\n{all_files}")
@@ -125,7 +125,7 @@ class GcpOxidizer:
     def describe_singlerun_configs(self, config_name: str):
         try:
             script_dir = os.path.dirname(__file__)
-            configs_dir = f"{script_dir}/../../{SINGLE_RUN_CONFIGS_DIR}"
+            configs_dir = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}"
             filename = os.path.abspath(f"{configs_dir}/{config_name}.yaml")
             print(f"Config file: {filename}\n")
             with open(filename, 'r') as fh:
@@ -202,7 +202,7 @@ class GcpOxidizer:
         :param resource_name: GCP resource name to scan
         """
         try:
-            script_dir, _ = os.path.split(__file__)
+            script_dir = os.path.dirname(__file__)
             filename = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}/{resource_name}.yaml"
             with open(filename) as fh:
                 service = yaml.safe_load(fh)
