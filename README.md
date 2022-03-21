@@ -326,6 +326,3 @@ cloudimized -s --describe --name <RESOURCE_NAME>
 
 By default script will dump results in YAML format same as in main mode. If chosen it can dump results in CSV file
 format (single file per resource).
-
-**LIMITATION:** Currently output in csv format doesn't support nested structures, it will fail if there is a list or
-dictionary in result. Therefore, selecting specific fields for each resource is needed.

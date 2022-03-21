@@ -4,6 +4,7 @@ import csv
 from typing import List, Dict
 from pathlib import Path
 from os.path import isdir
+from flatdict import FlatterDict
 
 from cloudimized.gcpcore.gcpservicequery import GcpServiceQuery
 
@@ -92,7 +93,8 @@ class QueryResult:
             for project_id, result in projects.items():
                 for entry in result:
                     try:
-                        fieldnames_map[resource_name].update(entry.keys())
+                        flatentry = FlatterDict(entry)
+                        fieldnames_map[resource_name].update(flatentry.keys())
                     except Exception as e:
                         logger.warning(f"Unable to get fieldnames for resource {resource_name} from entry {entry}")
                         continue
@@ -109,7 +111,8 @@ class QueryResult:
                             continue
                         for entry in result:
                             entry[PROJECTID_KEY] = project_id
-                            writer.writerow(entry)
+                            flatentry = FlatterDict(entry)
+                            writer.writerow(dict(flatentry))
             except Exception as e:
                 raise QueryResultError(f"Issue writing results to file {filename}") from e
 

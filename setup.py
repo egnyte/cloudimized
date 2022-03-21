@@ -38,6 +38,7 @@ setup(
         'charset-normalizer==2.0.9',
         'cryptography==36.0.1',
         'defusedxml==0.7.1',
+        'flatdict==4.0.1',
         'gitdb==4.0.9',
         'GitPython==3.1.27',
         'google-api-core==2.3.2',
