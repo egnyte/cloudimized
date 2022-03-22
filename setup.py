@@ -7,7 +7,7 @@ with codecs.open("README.md", encoding="utf-8") as f:
 
 setup(
     name="cloudimized",
-    version="1.2.0",
+    version="1.2.1rc1",
     description='Google Cloud Platform (GCP) configuration scanning tool',
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -38,6 +38,7 @@ setup(
         'charset-normalizer==2.0.9',
         'cryptography==36.0.1',
         'defusedxml==0.7.1',
+        'flatdict==4.0.1',
         'gitdb==4.0.9',
         'GitPython==3.1.27',
         'google-api-core==2.3.2',
