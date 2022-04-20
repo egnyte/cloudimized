@@ -1,6 +1,11 @@
 import logging
 import google.auth
 import google.auth.transport.requests
+import google_auth_httplib2
+import googleapiclient.http
+import httplib2
+from googleapiclient.discovery import Resource
+
 from .gcpquery import GcpQuery
 
 from os import getenv
@@ -39,28 +44,31 @@ class GcpServiceQuery:
         """
         self.serviceName = serviceName
         self.version = version
-        self.service = None
         self.queries = {}
 
-    def build(self) -> None:
+    def build(self) -> Resource:
         """Build resource for interacting with Google Cloud API"""
-        if not self.queries:
-            raise GcpServiceQueryError(f"Queries not configured for service {self.serviceName}")
+        def build_request(http, *args, **kwargs):
+            new_http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http())
+            return googleapiclient.http.HttpRequest(new_http, *args, **kwargs)
+
         if getenv("GOOGLE_APPLICATION_CREDENTIALS"):
             logger.info(f"Authenticating using GOOGLE_APPLICATION_CREDENTIALS env var")
-            self.service = discovery.build(self.serviceName,
-                                           self.version) #TODO: exception handling
+            credentials, _ = google.auth.default(scopes=["https://googleapis.com/auth/cloud-platform"])
+            authorized_http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http())
+            service = discovery.build(self.serviceName,
+                                      self.version,
+                                      http=authorized_http) #TODO: exception handling
         else:
             logger.info(f"Authenticating using Google's Application Default Credentials (ADC)")
-            credentials, project = google.auth.default(scopes=["https://googleapis.com/auth/cloud-platform"])
-            auth_req = google.auth.transport.requests.Request()
-            credentials.refresh(auth_req)
-            self.service = discovery.build(self.serviceName,
-                                           self.version,
-                                           credentials=credentials)
-        # Set GCP service object in all queries
-        for _, query in self.queries.items():
-            query.service = self.service
+            credentials, _ = google.auth.default(scopes=["https://googleapis.com/auth/cloud-platform"])
+            # auth_req = google.auth.transport.requests.Request()
+            # credentials.refresh(auth_req)
+            authorized_http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http())
+            service = discovery.build(self.serviceName,
+                                      self.version,
+                                      http=authorized_http)
+        return service
 
 
 def configure_services(config: List[Dict]) -> Dict[str, GcpServiceQuery]:
