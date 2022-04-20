@@ -31,6 +31,7 @@ DISCOVER_PROJECTS_KEY = "discover_projects"
 EXCLUDED_PROJECTS_KEY = "excluded_projects"
 PROJECTS_LIST_KEY = "project_list"
 SCAN_INTERVAL = "scan_interval"
+THREAD_COUNT = "thread_count"
 
 # DISCOVERY PROJECTS QUERY CONFIG
 PROJECTS_DISCOVERY_SERVICE_NAME = "cloudresourcemanager"
@@ -76,6 +77,7 @@ class GcpOxidizer:
         self.projects = None
         self.run_results = None
         self.change_processor = None
+        self.thread_count = None
         if not self.arg_singlerun:
             self.parse_config_file()
         else:
@@ -196,6 +198,7 @@ class GcpOxidizer:
         self.do_project_discovery = config.get(DISCOVER_PROJECTS_KEY, "False")
         self.excluded_projects = config.get(EXCLUDED_PROJECTS_KEY, [])
         self.projects = config.get(PROJECTS_LIST_KEY, None)  # TODO Add logic to detect if list is not set
+        self.thread_count = config.get(THREAD_COUNT, 3)
         # TODO Move logging setup at the beggining
         self.set_logging(self.loglevel)
 
@@ -262,7 +265,7 @@ class GcpOxidizer:
         # Create per-thread local storage
         local = threading.local()
         for serviceName, service in self.gcp_services.items():
-            with ThreadPoolExecutor(max_workers=3, initializer=initializer_worker,
+            with ThreadPoolExecutor(max_workers=self.thread_count, initializer=initializer_worker,
                                     initargs=(local, service)) as executor:
                 for resource_name, query in service.queries.items():
                     logger.info(f"Querying configuration for resource '{resource_name}'")
