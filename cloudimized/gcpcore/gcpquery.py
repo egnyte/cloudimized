@@ -27,7 +27,6 @@ class GcpQuery:
     """A class for sending list query to GCP"""
 
     def __init__(self, resource_name: str,
-                 service: Resource,
                  api_call: str,
                  gcp_log_resource_type: str,
                  result_items_field: str,
@@ -38,7 +37,6 @@ class GcpQuery:
                  **kwargs):
         """
         :param resource_name: user-friendly name to describe queried resource
-        :param service: GCP Resource object for interacting with service
         :param api_call: GCP function call to run on service
         :param gcp_log_resource_type: resource type in GCP Log Explorer associated with resource_name
         :param result_item_field: key name for items queried in GCP response
@@ -52,7 +50,6 @@ class GcpQuery:
             raise GcpQueryArgumentError(f"Issue for resource_name {resource_name} field_include_filter and "
                                         f"field_exclude_filter are mutually exclusive")
         self.resource_name = resource_name
-        self.service = service
         self.api_call = api_call
         self.gcp_log_resource_type = gcp_log_resource_type
         self.result_items_field = result_items_field
@@ -62,14 +59,15 @@ class GcpQuery:
         self.num_retries = num_retries
         self.kwargs = kwargs
 
-    def execute(self, project_id: str) -> List[Dict]:
+    def execute(self, service: Resource, project_id: str) -> List[Dict]:
         """
         Sends GCP query that lists resources in project. keyword_arguments should contain project_id entry
         where string <PROJECT_ID> will be substituted with project_id
+        :param service: GCP Resource object used to send query
         :param project_id: GCP project ID to query
         :return: List of resources that were queried
         """
-        if not self.service:
+        if service is None:
             raise GcpQueryError(f"Service not set for '{self.resource_name}'")
         logger.info(f"Running query for '{self.resource_name}' in project '{project_id}'")
         # Replace <PROJECT_ID> in kwargs with actual project_id
@@ -86,10 +84,10 @@ class GcpQuery:
             # Build function call for resource
             # i.e. run service.projects().list()
             ## Run query without last call i.e. service.projects()
-            logger.debug(f"Query GCP Resource object: {self.service}\n"
+            logger.debug(f"Query GCP Resource object: {service}\n"
                          f"Query API call: {self.api_call}")
             api_last_call_method = self.api_call.split(".")[-1]
-            query_base = reduce(lambda x, y: methodcaller(y)(x), self.api_call.split(".")[:-1], self.service)
+            query_base = reduce(lambda x, y: methodcaller(y)(x), self.api_call.split(".")[:-1], service)
             logger.debug(f"Query base for API call: {query_base}\nAPI call kwargs: {query_kwargs}")
             # Run last call on service with arguments if present i.e. (service.projects()).list()
             request = methodcaller(api_last_call_method, **query_kwargs)(query_base)
@@ -235,7 +233,6 @@ def configure_queries(queries: List[Dict[str, Any]]) -> Dict[str, GcpQuery]:
                 kwargs = {**kwargs, **query["gcp_function_args"]}
             results_items_field = query.get(RESULT_ITEMS_FIELD, DEFAULT_RESULT_ITEMS_FILED)
             result[query[RESOURCE]] = GcpQuery(resource_name=query[RESOURCE],
-                                               service=None, #TODO remove service from GcpQuery constructor
                                                api_call=query[GCP_API_CALL],
                                                gcp_log_resource_type=query[GCP_LOG_RESOURCE_TYPE],
                                                result_items_field=results_items_field,

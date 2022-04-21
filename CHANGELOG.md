@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+
+* Add multi-threading for resource scanning queries
+
 ## 1.2.1
 
 * Add support for nested results for CSV output 

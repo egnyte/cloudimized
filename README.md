@@ -249,6 +249,9 @@ discover_projects: True
 excluded_projects:                                 
   - excluded-project-ID
 
+# Number of threads for scanning resources
+thread_count: 4 # default - 3
+
 # Change handling configuration
 change_processor:
   # Interval (in minutes) between each scan - has to match script execution interval

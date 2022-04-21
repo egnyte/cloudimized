@@ -1,9 +1,12 @@
 import argparse
 import logging
 import os
+import threading
 
 import sys
 import yaml
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from cloudimized.core.changeprocessor import configure_change_processor, ChangeProcessorError, CHANGE_PROCESSOR
 from cloudimized.core.result import set_query_results_from_configuration, QueryResultError
@@ -12,7 +15,7 @@ from cloudimized.gcpcore.gcpquery import RESOURCE, GCP_API_CALL, RESULT_ITEMS_FI
     GCP_LOG_RESOURCE_TYPE
 from cloudimized.gcpcore.gcpquery import configure_queries, GcpQueryArgumentError, GcpQueryError
 from cloudimized.gcpcore.gcpservicequery import SERVICE_NAME, SERVICE_SECTION, VERSION, QUERIES
-from cloudimized.gcpcore.gcpservicequery import configure_services, GcpServiceQueryConfigError
+from cloudimized.gcpcore.gcpservicequery import configure_services, GcpServiceQuery, GcpServiceQueryConfigError
 from cloudimized.gitcore.repo import configure_repo, GitRepoError, GitRepoConfigError, GIT_USER, GIT_PASSWORD, \
     GIT_SECTION
 from cloudimized.core.jiranotifier import JIRA_USR, JIRA_PSW
@@ -28,6 +31,7 @@ DISCOVER_PROJECTS_KEY = "discover_projects"
 EXCLUDED_PROJECTS_KEY = "excluded_projects"
 PROJECTS_LIST_KEY = "project_list"
 SCAN_INTERVAL = "scan_interval"
+THREAD_COUNT = "thread_count"
 
 # DISCOVERY PROJECTS QUERY CONFIG
 PROJECTS_DISCOVERY_SERVICE_NAME = "cloudresourcemanager"
@@ -73,6 +77,7 @@ class GcpOxidizer:
         self.projects = None
         self.run_results = None
         self.change_processor = None
+        self.thread_count = None
         if not self.arg_singlerun:
             self.parse_config_file()
         else:
@@ -193,6 +198,7 @@ class GcpOxidizer:
         self.do_project_discovery = config.get(DISCOVER_PROJECTS_KEY, "False")
         self.excluded_projects = config.get(EXCLUDED_PROJECTS_KEY, [])
         self.projects = config.get(PROJECTS_LIST_KEY, None)  # TODO Add logic to detect if list is not set
+        self.thread_count = config.get(THREAD_COUNT, 3)
         # TODO Move logging setup at the beggining
         self.set_logging(self.loglevel)
 
@@ -243,9 +249,9 @@ class GcpOxidizer:
         project_service = configure_services(PROJECTS_DISCOVERY_SERVICE_CONFIG)
         project_service[PROJECTS_DISCOVERY_SERVICE_NAME].queries = \
             configure_queries(PROJECTS_DISCOVERY_SERVICE_CONFIG[0][GCP_QUERIES])
-        project_service[PROJECTS_DISCOVERY_SERVICE_NAME].build()
+        service = project_service[PROJECTS_DISCOVERY_SERVICE_NAME].build()
         result = project_service[PROJECTS_DISCOVERY_SERVICE_NAME].queries[PROJECTS_DISCOVERY_RESOURCE_NAME] \
-            .execute(project_id=None)
+            .execute(service=service, project_id=None)
         # Create list of project_id from query
         all_projects = [project["projectId"] for project in result]
         # Filter out exclude projects
@@ -256,27 +262,29 @@ class GcpOxidizer:
         """
         Execute all configured queries and gather results
         """
+        # Create per-thread local storage
+        local = threading.local()
         for serviceName, service in self.gcp_services.items():
-            try:
-                logger.info(f"Connecting to Google API for service '{serviceName}'")
-                service.build()
-            except Exception as e:
-                logger.warning(f"Issue connecting to API for service '{serviceName}'. "
-                               "Skipping all its queries")
-                continue
-            for resource_name, query in service.queries.items():
-                logger.info(f"Querying configuration for resource '{resource_name}'")
-                for project_id in self.projects:
-                    try:
-                        result = query.execute(project_id)
-                        if result is None:
-                            logger.info(f"No '{resource_name}' resources found for project '{project_id}'")
-                            continue
-                        self.run_results.add_result(resource_name, project_id, result)
-                    except GcpQueryError as e:
-                        logger.warning(f"Issue when performing query for resource '{resource_name} "
-                                       f"for project '{project_id}\n{e}\n{e.__cause__}")
-                        #TODO: Add handling of failed queries i.e. error stats at the end
+            with ThreadPoolExecutor(max_workers=self.thread_count, initializer=initializer_worker,
+                                    initargs=(local, service)) as executor:
+                for resource_name, query in service.queries.items():
+                    logger.info(f"Querying configuration for resource '{resource_name}'")
+                    futures = []
+                    for project_id in self.projects:
+                        future = executor.submit(query_task, query.execute, project_id, local)
+                        future.project_id = project_id
+                        futures.append(future)
+                    for future in as_completed(futures):
+                        try:
+                            result = future.result()
+                            if result is None:
+                                logger.info(f"No '{resource_name}' resources found for project '{future.project_id}'")
+                                continue
+                            self.run_results.add_result(resource_name, future.project_id, result)
+                        except GcpQueryError as e:
+                            logger.warning(f"Issue when performing query for resource '{resource_name} "
+                                           f"for project '{future.project_id}\n{e}\n{e.__cause__}")
+                            #TODO: Add handling of failed queries i.e. error stats at the end
 
     def singlerun_mode(self):
         # Discover all projects
@@ -336,6 +344,29 @@ class GcpOxidizer:
             except ChangeProcessorError as e:
                 logger.critical(f"Issue processing Git changes\n{e}\n{e.__cause__}")
         logger.info("Run completed")
+
+
+def initializer_worker(local, service: GcpServiceQuery):
+    """
+    Initializer function for Query execute threads
+    :param local: theading.local() instance
+    :param service: GCP service instance
+    """
+    logger.info(f"Creating GCP service object {service.serviceName} for thread {threading.get_ident()}")
+    try:
+        local.service = service.build()
+    except Exception as e:
+        logger.warning(f"Issue building service {service.serviceName}\n{e}\n{e.__cause__}")
+
+
+def query_task(query_function, project_id, local):
+    """
+    Wrapper for query function for multithreading
+    :param query_function: query execute function
+    :param project_id: GCP project ID to scan
+    :param local: thread local variable
+    """
+    return query_function(local.service, project_id)
 
 
 def execute():
