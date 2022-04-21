@@ -271,7 +271,7 @@ class GcpOxidizer:
                     logger.info(f"Querying configuration for resource '{resource_name}'")
                     futures = []
                     for project_id in self.projects:
-                        future = executor.submit(query_task, query.execute, project_id, local) #TODO Redo execute for service var
+                        future = executor.submit(query_task, query.execute, project_id, local)
                         future.project_id = project_id
                         futures.append(future)
                     for future in as_completed(futures):
@@ -354,7 +354,7 @@ def initializer_worker(local, service: GcpServiceQuery):
     """
     logger.info(f"Creating GCP service object {service.serviceName} for thread {threading.get_ident()}")
     try:
-        local.service = service.build() #TODO Redo build to return object
+        local.service = service.build()
     except Exception as e:
         logger.warning(f"Issue building service {service.serviceName}\n{e}\n{e.__cause__}")
 
