@@ -2,15 +2,11 @@ import logging
 import google.auth
 import google.auth.transport.requests
 import google_auth_httplib2
-import googleapiclient.http
 import httplib2
 from googleapiclient.discovery import Resource
 
-from .gcpquery import GcpQuery
-
 from os import getenv
 from typing import List, Dict
-from itertools import filterfalse
 from googleapiclient import discovery
 
 logger = logging.getLogger(__name__)
@@ -48,26 +44,16 @@ class GcpServiceQuery:
 
     def build(self) -> Resource:
         """Build resource for interacting with Google Cloud API"""
-        def build_request(http, *args, **kwargs):
-            new_http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http())
-            return googleapiclient.http.HttpRequest(new_http, *args, **kwargs)
-
         if getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-            logger.info(f"Authenticating using GOOGLE_APPLICATION_CREDENTIALS env var")
-            credentials, _ = google.auth.default(scopes=["https://googleapis.com/auth/cloud-platform"])
-            authorized_http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http())
-            service = discovery.build(self.serviceName,
-                                      self.version,
-                                      http=authorized_http) #TODO: exception handling
+            logger.info("Env var 'GOOGLE_APPLICATION_CREDENTIALS' set. Authenticating using credentials file")
         else:
-            logger.info(f"Authenticating using Google's Application Default Credentials (ADC)")
-            credentials, _ = google.auth.default(scopes=["https://googleapis.com/auth/cloud-platform"])
-            # auth_req = google.auth.transport.requests.Request()
-            # credentials.refresh(auth_req)
-            authorized_http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http())
-            service = discovery.build(self.serviceName,
-                                      self.version,
-                                      http=authorized_http)
+            logger.info("Env var 'GOOGLE_APPLICATION_CREDENTIALS' not set. Authenticating using default credentials")
+
+        credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+        authorized_http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http(timeout=60))
+        service = discovery.build(self.serviceName,
+                                  self.version,
+                                  http=authorized_http)
         return service
 
 

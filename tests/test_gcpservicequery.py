@@ -40,7 +40,7 @@ class GcpServiceQueryTestCase(unittest.TestCase):
         mock_discovery.build.return_value = mock.MagicMock(spec=Resource)
         mock_auth.default.return_value = (mock.MagicMock(), mock.MagicMock())
         service = self.gcpservice.build()
-        mock_auth.default.assert_called_with(scopes=["https://googleapis.com/auth/cloud-platform"])
+        mock_auth.default.assert_called_with(scopes=["https://www.googleapis.com/auth/cloud-platform"])
         mock_discovery.build.assert_called_with(self.gcpservice.serviceName,
                                                 self.gcpservice.version,
                                                 http=mock_authhttp_object)
