@@ -17,11 +17,12 @@ RESULT_ITEMS_FIELD = "items"
 DEFAULT_RESULT_ITEMS_FILED = "items"
 ITEM_EXCLUDE_FILTER = "item_exclude_filter"
 NUM_RETRIES = "num_retries"
+SORT_FIELDS = "sortFields"
 
 DEFAULT_NUM_RETRIES = 3
 
 AGGREGATED_LIST = "aggregatedList"
-SORT_KEY = "name"
+DEFAULT_SORT_FIELDS = ["name"]
 
 class GcpQuery:
     """A class for sending list query to GCP"""
@@ -34,6 +35,7 @@ class GcpQuery:
                  field_include_filter: List = None,
                  item_exclude_filter: List[Dict[str, str]] = None,
                  num_retries: int = 3,
+                 sort_fields: List = DEFAULT_SORT_FIELDS,
                  **kwargs):
         """
         :param resource_name: user-friendly name to describe queried resource
@@ -44,6 +46,7 @@ class GcpQuery:
         :param field_include_filter: fields to keep for each item
         :param item_exclude_filter: regex rules to use for filtering whole items
         :param num_retries: number of retry attempts for API calls
+        :param sort_fields: results sorting fields
         :param kwargs: kwargs to pass into gcp function
         """
         if field_include_filter and field_exclude_filter:
@@ -57,6 +60,7 @@ class GcpQuery:
         self.result_include_filter = field_include_filter
         self.result_item_filter = item_exclude_filter
         self.num_retries = num_retries
+        self.sort_fields = sort_fields
         self.kwargs = kwargs
 
     def execute(self, service: Resource, project_id: str) -> List[Dict]:
@@ -105,12 +109,7 @@ class GcpQuery:
         # Sort result list to get predictable results
         # Results from kubernetes cluster list call return non-consistent list order
         # Perform sorting based on "name" key if present
-        try:
-            result.sort(key=itemgetter(SORT_KEY))
-        except Exception as e:
-            logger.warning(f"Skipping result sorting for API call '{self.api_call}' for project '{project_id}'. "
-                           f"Missing default sort key in result '{SORT_KEY}'")
-            logger.debug(f"Reason: {e}")
+        self.__sort_result(result, project_id)
         if self.result_item_filter:
             for filter_condition_set in self.result_item_filter:
                 result[:] = [i for i in result if self.__filter_item(i, filter_condition_set)]
@@ -170,6 +169,31 @@ class GcpQuery:
         # If there was a break don't filter item out
         return True
 
+    def __sort_result(self, result: List[Dict], project_id: str) -> None:
+        """
+        Performs sorting of given result list
+        :param result: results to be sorted
+        :param project_id: Project for logging purposes
+        """
+        for sort_field in self.sort_fields:
+            try:
+                if isinstance(sort_field, str):
+                    result.sort(key=itemgetter(sort_field))
+                elif isinstance(sort_field, dict):
+                    for inner_key, inner_field in sort_field.items():
+                        for outer_result_item in result:
+                            try:
+                                inner_result = outer_result_item[inner_key]
+                                inner_result.sort(key=itemgetter(inner_field))
+                            except Exception as e:
+                                logger.warning(f"Unable to sort inner list for {sort_field} fields for project "
+                                               f"{project_id}")
+            except Exception as e:
+                logger.warning(
+                    f"Issue sorting results for'{self.api_call}' for project '{project_id}' "
+                    f"for sorting field {sort_field}")
+                logger.debug(f"Reason: {e}")
+
     def _parse_aggregated_list(self, api_call_result: Dict[str, Dict]) -> List[Dict]:
         """
         Parses response from aggregatedList API call into format common to other calls
@@ -223,6 +247,7 @@ def configure_queries(queries: List[Dict[str, Any]]) -> Dict[str, GcpQuery]:
                 raise GcpQueryArgumentError(f"Incorrect GCP query configuration. Item exclude filter should be list, "
                                             f"is {type(item_exclude_filter)}")
         num_retries = query.get(NUM_RETRIES, DEFAULT_NUM_RETRIES)
+        sort_fields = query.get(SORT_FIELDS, DEFAULT_SORT_FIELDS)
         try:
             # Create kwargs from only keyword arguments
             ## Skip gcp query kwargs and pass everything else to api call
@@ -237,6 +262,7 @@ def configure_queries(queries: List[Dict[str, Any]]) -> Dict[str, GcpQuery]:
                                                gcp_log_resource_type=query[GCP_LOG_RESOURCE_TYPE],
                                                result_items_field=results_items_field,
                                                num_retries=num_retries,
+                                               sort_fields=sort_fields,
                                                **kwargs)
         except Exception as e:
             raise GcpQueryArgumentError(f"Issue parsing query config {query}") from e
