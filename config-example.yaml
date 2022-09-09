@@ -20,6 +20,9 @@ services:
         gcp_function_args:
           project: <PROJECT_ID>
         gcp_log_resource_type: gce_subnetwork
+        sortFields:
+          - name
+          - secondaryIpRanges: rangeName
       - resource: privateServicesAccessRanges
         gcp_api_call: globalAddresses.list
         gcp_function_args:

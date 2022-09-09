@@ -230,6 +230,12 @@ services:
           # From results remove each resource that "name" under "peerings" matches "servicenetwork-googleapis-com"
           - peerings:                     
               name: "servicenetworking-googleapis-com"
+        sortFields:
+           # Define fields used to perform sorting of results
+           ## Sort items in results using 'name' field as key
+           - name
+           ## Sort inner list (under key 'secondaryIpRanges') in each item using 'name' field as key
+           - secondaryIpRanges: name
 
 git:
    # Git repo's URL for GCP configuration storing
