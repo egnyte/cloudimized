@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+
+* Add result sorting configuration option
+
 ## 1.3.0
 
 * Add multi-threading for resource scanning queries
