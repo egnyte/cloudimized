@@ -159,13 +159,17 @@ class GcpQueryTestCase(unittest.TestCase):
                          api_call="firewalls.list",
                          gcp_log_resource_type="gce_firewall_rule",
                          result_items_field="items",
-                         project="<PROJECT_ID>")
+                         project="<PROJECT_ID>",
+                         sort_fields=["name", {"testNestedField": "name"}])
         mock_service = mock.MagicMock()
         mock_service.firewalls().list().execute.return_value = test_result_unsorted_with_name
         result = query.execute(service=mock_service, project_id="test_project")
         self.assertEqual(result[0]["name"], "aaaa")
         self.assertEqual(result[1]["name"], "dddd")
         self.assertEqual(result[2]["name"], "zzzz")
+        self.assertEqual(result[0]["testNestedField"][0]["name"], "aaaa")
+        self.assertEqual(result[0]["testNestedField"][1]["name"], "bbbb")
+        self.assertEqual(result[0]["testNestedField"][2]["name"], "zzzz")
         mock_service.firewalls().list.assert_called_with(project="test_project")
 
     def testExecute_no_items_in_response(self):
@@ -290,6 +294,7 @@ class GcpQueryTestCase(unittest.TestCase):
                       gcp_log_resource_type="gce_network",
                       result_items_field="items",
                       num_retries=3,
+                      sort_fields=["name"],
                       field_exclude_filter=["creationTimestamp"],
                       project="<PROJECT_ID>"),
             mock.call(resource_name="staticRoute",
@@ -297,13 +302,15 @@ class GcpQueryTestCase(unittest.TestCase):
                       gcp_log_resource_type="gce_route",
                       result_items_field="items",
                       num_retries=3,
+                      sort_fields=["name"],
                       field_exclude_filter=["creationTimestamp"],
                       project="<PROJECT_ID>"),
             mock.call(resource_name="project",
                       api_call="projects.list",
                       gcp_log_resource_type="N/A",
                       result_items_field="items",
-                      num_retries=3)
+                      num_retries=3,
+                      sort_fields=["name", {"testNestedField": "name"}])
         ]
         mock_gcpquery.assert_has_calls(calls)
         self.assertIsInstance(result, dict)
@@ -754,6 +761,7 @@ test_queries_compute = [
         "resource": "project",
         "gcp_api_call": "projects.list",
         "gcp_log_resource_type": "N/A",
+        "sortFields": ["name", {"testNestedField": "name"}],
     }
 ]
 
@@ -806,6 +814,11 @@ test_result_unsorted_with_name = {"items": [
     },
     {
         "name": "aaaa",
+        "testNestedField": [
+            {"name": "zzzz"},
+            {"name": "aaaa"},
+            {"name": "bbbb"},
+        ]
     }
 ]}
 
