@@ -60,7 +60,7 @@ setup(
         'jira==3.1.1',
         'keyring==23.5.0',
         'mock==4.0.3',
-        'oauthlib==3.2.0',
+        'oauthlib==3.2.1',
         'packaging==21.3',
         'proto-plus==1.19.8',
         'protobuf==3.19.1',
