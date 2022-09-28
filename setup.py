@@ -63,7 +63,7 @@ setup(
         'oauthlib==3.2.1',
         'packaging==21.3',
         'proto-plus==1.19.8',
-        'protobuf==3.19.1',
+        'protobuf==3.19.5',
         'pyasn1==0.4.8',
         'pyasn1-modules==0.2.8',
         'pycparser==2.21',
