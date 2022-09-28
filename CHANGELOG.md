@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.2
+
+* Upgrade dependencies
+
 ## 1.3.1
 
 * Add result sorting configuration option
