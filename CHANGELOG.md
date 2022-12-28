@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.3
+
+* Upgrade security dependencies
+
 ## 1.3.2
 
 * Upgrade dependencies
