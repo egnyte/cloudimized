@@ -40,7 +40,7 @@ setup(
         'defusedxml==0.7.1',
         'flatdict==4.0.1',
         'gitdb==4.0.9',
-        'GitPython==3.1.27',
+        'GitPython==3.1.30',
         'google-api-core==2.3.2',
         'google-api-python-client==2.33.0',
         'google-auth==2.3.3',
