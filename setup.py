@@ -70,7 +70,7 @@ setup(
         'pyparsing==3.0.6',
         'python-dateutil==2.8.2',
         'PyYAML==6.0',
-        'requests==2.26.0',
+        'requests==2.31.0',
         'requests-oauthlib==1.3.1',
         'requests-toolbelt==0.9.1',
         'rsa==4.8',
