@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.5
+
+* Upgrade dependencies
+
+## 1.3.4
+
+* Upgrade dependencies
+
 ## 1.3.2
 
 * Upgrade dependencies
@@ -27,4 +35,4 @@
 
 ## 1.0.0
 
-* Inital version of Cloudimized
+* Initial version of Cloudimized
