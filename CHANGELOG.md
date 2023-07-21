@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.7
+
+* Improve result filter include functionality
+
 ## 1.3.6
 
 * Upgrade dependencies
