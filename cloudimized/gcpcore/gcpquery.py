@@ -116,7 +116,7 @@ class GcpQuery:
         if self.result_exclude_filter:
             return self.__filter_field_exclude(self.result_exclude_filter, result)
         elif self.result_include_filter:
-            return self._filter_result_include(result)
+            return self._filter_field_include(self.result_include_filter, result)
         else:
             return result
 
@@ -136,13 +136,29 @@ class GcpQuery:
                             self.__filter_field_exclude(fields=nested_fields, result=nested_result)
         return filtered_result
 
-    def _filter_result_include(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Filter out all fields except ones specified from each item in results"""
-        filtered_result = []
-        for item in result:
-            filtered_item = {key: item[key] for key in item if key in self.result_include_filter}
-            filtered_result.append(filtered_item)
-        return filtered_result
+    def _filter_field_include(self, fields: List[Union[str, Dict]], result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Filter out all fields except ones specified from each item in results
+        """
+        def filter_dict(entry, filters):
+            filtered_entry = {}
+            for key, value in entry.items():
+                if isinstance(value, dict):
+                    if key in filters:
+                        if not filters[key]:  # Include the entire nested dictionary
+                            filtered_entry[key] = filter_dict(value, {})
+                        else:
+                            filtered_entry[key] = filter_dict(value, filters[key])
+                elif key in filters or not filters:  # Include the field if it's in filters or filters are empty
+                    filtered_entry[key] = value
+            return filtered_entry
+
+        filtered_data = []
+        for entry in result:
+            filtered_entry = filter_dict(entry, fields)
+            filtered_data.append(filtered_entry)
+
+        return filtered_data
 
     def __filter_item(self, item: Dict[str, Any], filter_condition_set) -> bool:
         for filter_field, filter_condition in filter_condition_set.items():
