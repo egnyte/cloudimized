@@ -33,7 +33,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'cachetools==4.2.4',
-        'certifi==2022.12.7',
+        'certifi==2023.7.22',
         'cffi==1.15.0',
         'charset-normalizer==2.0.9',
         'cryptography==41.0.2',
