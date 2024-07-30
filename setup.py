@@ -51,7 +51,7 @@ setup(
         'google-cloud-logging==2.7.0',
         'googleapis-common-protos==1.54.0',
         'grpc-google-iam-v1==0.12.3',
-        'grpcio==1.53.0',
+        'grpcio==1.53.2',
         'grpcio-status==1.43.0',
         'httplib2==0.20.2',
         'idna==3.3',
