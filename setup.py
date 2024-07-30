@@ -82,7 +82,7 @@ setup(
         'time-machine==2.5.0',
         'typing-extensions==4.0.1',
         'uritemplate==4.1.1',
-        'urllib3==1.26.18',
+        'urllib3==1.26.19',
         'zipp==3.7.0',
     ],
     extras_require={
