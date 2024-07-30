@@ -54,7 +54,7 @@ setup(
         'grpcio==1.53.2',
         'grpcio-status==1.43.0',
         'httplib2==0.20.2',
-        'idna==3.3',
+        'idna==3.7',
         'importlib-metadata==4.11.2',
         'jeepney==0.7.1',
         'jira==3.1.1',
