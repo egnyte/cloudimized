@@ -36,7 +36,7 @@ setup(
         'certifi==2023.7.22',
         'cffi==1.15.0',
         'charset-normalizer==2.0.9',
-        'cryptography==41.0.6',
+        'cryptography==42.0.4',
         'defusedxml==0.7.1',
         'flatdict==4.0.1',
         'gitdb==4.0.9',
