@@ -70,7 +70,8 @@ class GcpQueryTestCase(unittest.TestCase):
         mock_service = mock.MagicMock()
         mock_service.projects().list().execute.return_value = {"not-items": ["test"]}
         result = query.execute(service=mock_service, project_id=None)
-        self.assertIsNone(result)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 0)
         mock_service.projects().list.assert_called_with()
 
     def testExecute_no_kwargs(self):
@@ -137,8 +138,29 @@ class GcpQueryTestCase(unittest.TestCase):
         mock_service = mock.MagicMock()
         mock_service.subnetworks().aggregatedList().execute.return_value = test_aggregatedList_response_empty
         result = query.execute(service=mock_service, project_id="test_project")
-        self.assertIsNone(result)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 0)
         mock_service.subnetworks().aggregatedList.assert_called_with(project="test_project")
+
+    def testExecute_aggreagtedList_paged(self):
+        query = GcpQuery(resource_name="subnetworks",
+                         api_call="subnetworks.aggregatedList",
+                         gcp_log_resource_type="gce_subnetwork",
+                         result_items_field="items",
+                         project="<PROJECT_ID>")
+        mock_service = mock.MagicMock()
+        mock_service.subnetworks().aggregatedList().execute.side_effect = [test_aggregatedList_response_paged,
+                                                                           test_aggregatedList_response]
+        result = query.execute(service=mock_service, project_id="test_project")
+        self.assertIsInstance(result, list)
+        self.assertEqual(6, len(result))
+        self.assertEqual(result[0]["name"], "test-subnetwork1")
+        self.assertEqual(result[1]["name"], "test-subnetwork2")
+        self.assertEqual(result[2]["name"], "test-subnetwork3")
+        self.assertEqual(result[3]["name"], "test-subnetwork4")
+        self.assertEqual(result[4]["name"], "test-subnetwork5")
+        self.assertEqual(result[5]["name"], "test-subnetwork6")
+        mock_service.subnetworks().aggregatedList.assert_called_with(project="test_project", pageToken="test_token")
 
     def testExecute_unsorted_result_issue_sorting(self):
         query = GcpQuery(resource_name="firewalls",
@@ -789,6 +811,43 @@ test_aggregatedList_response = {"items":{
         ]
     }
 }}
+
+test_aggregatedList_response_paged = {"items":{
+    "regions/europe-north1": {
+        "warning": {
+            "code": "NO_RESULTS_ON_PAGE",
+            "data": [
+                {
+                    "key": "scope",
+                    "value": "regions/asia-south1"
+                }
+            ],
+            "message": "There are no results for scope 'regions/asia-south1' on this page."
+        }
+    },
+    "regions/europe-north2": {
+        "subnetworks": [
+            {
+                "name": "test-subnetwork3"
+            },
+            {
+                "name": "test-subnetwork4"
+            }
+        ]
+    },
+    "regions/asia-south2": {
+        "subnetworks": [
+            {
+                "name": "test-subnetwork5"
+            },
+            {
+                "name": "test-subnetwork6"
+            }
+        ]
+    },
+},
+"nextPageToken": "test_token"
+}
 
 test_aggregatedList_response_empty = {"items":{
     "regions/asia-south1": {

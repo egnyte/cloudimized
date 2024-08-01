@@ -24,6 +24,9 @@ DEFAULT_NUM_RETRIES = 3
 AGGREGATED_LIST = "aggregatedList"
 DEFAULT_SORT_FIELDS = ["name"]
 
+GCP_PAGE_TOKEN = "pageToken"
+GCP_NEXT_PAGE_TOKEN = "nextPageToken"
+
 class GcpQuery:
     """A class for sending list query to GCP"""
 
@@ -92,20 +95,27 @@ class GcpQuery:
                          f"Query API call: {self.api_call}")
             api_last_call_method = self.api_call.split(".")[-1]
             query_base = reduce(lambda x, y: methodcaller(y)(x), self.api_call.split(".")[:-1], service)
-            logger.debug(f"Query base for API call: {query_base}\nAPI call kwargs: {query_kwargs}")
-            # Run last call on service with arguments if present i.e. (service.projects()).list()
-            request = methodcaller(api_last_call_method, **query_kwargs)(query_base)
-            logger.debug(f"API call request object: {request}")
-            response = request.execute(num_retries=self.num_retries)
-            logger.debug(f"API call response object: {response}")
+            result = []
+            while True:
+                logger.debug(f"Query base for API call: {query_base}\nAPI call kwargs: {query_kwargs}")
+                # Run last call on service with arguments if present i.e. (service.projects()).list()
+                request = methodcaller(api_last_call_method, **query_kwargs)(query_base)
+                logger.debug(f"API call request object: {request}")
+                response = request.execute(num_retries=self.num_retries)
+                logger.debug(f"API call response object: {response}")
+                current_result = response.get(self.result_items_field, [])
+                # Separated handling for aggregatedList call (that returned a response)
+                if api_last_call_method == AGGREGATED_LIST and isinstance(current_result, dict):
+                    current_result = self._parse_aggregated_list(current_result)
+                result.extend(current_result)
+                #Continue until there is no further page
+                next_page_token = response.get(GCP_NEXT_PAGE_TOKEN, None)
+                if next_page_token is None:
+                    break
+                else:
+                    query_kwargs[GCP_PAGE_TOKEN] = next_page_token
         except Exception as e:
             raise GcpQueryError(f"Issue executing call '{self.api_call}' with args '{self.kwargs}'") from e
-        result = response.get(self.result_items_field, None)
-        # Separate handling for aggregatedList call
-        if api_last_call_method == AGGREGATED_LIST:
-            result = self._parse_aggregated_list(result)
-        if not result:
-            return result
         # Sort result list to get predictable results
         # Results from kubernetes cluster list call return non-consistent list order
         # Perform sorting based on "name" key if present
@@ -232,13 +242,9 @@ class GcpQuery:
                 if api_result_resource_name in region_response:
                     logger.debug(f"Found resource '{api_result_resource_name}' in region '{region}'")
                     result.extend(region_response[api_result_resource_name])
+            return result
         except Exception as e:
             raise GcpQueryError(f"Issue processing api_call_result") from e
-        # Return None to make it compatible with normal queries
-        if not result:
-            return None
-        else:
-            return result
 
 
 def configure_queries(queries: List[Dict[str, Any]]) -> Dict[str, GcpQuery]:

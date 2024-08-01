@@ -277,7 +277,7 @@ class GcpOxidizer:
                     for future in as_completed(futures):
                         try:
                             result = future.result()
-                            if result is None:
+                            if len(result) == 0:
                                 logger.info(f"No '{resource_name}' resources found for project '{future.project_id}'")
                                 continue
                             self.run_results.add_result(resource_name, future.project_id, result)
