@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.10
+
+* Update Slack API file upload call
+* Upgrade dependencies
+
 ## 1.3.9
 
 * Fix paging limitation for GCP API call
