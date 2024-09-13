@@ -75,7 +75,7 @@ setup(
         'rsa==4.8',
         'SecretStorage==3.3.1',
         'six==1.16.0',
-        'slack-sdk==3.13.0',
+        'slack-sdk==3.19.0',
         'smmap==5.0.0',
         'terrasnek==0.1.7',
         'time-machine==2.5.0',

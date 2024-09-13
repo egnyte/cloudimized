@@ -44,11 +44,14 @@ class SlackNotifier:
             comment += f"Unknown commit ID: {self.repo_commit_url}s/master\n"
 
         try:
-            response = client.files_upload(
-                channels=self.channelID,
-                title=change.get_filename(),
-                content=change.diff,
-                initial_comment=comment
+            response = client.files_upload_v2(
+                channel = self.channelID,
+                initial_comment = comment,
+                file_uploads=[{
+                    "content": change.diff,
+                    "filename": change.get_filename(),
+                    "title": change.get_filename()
+                }]
             )
         except Exception as e:
             raise SlackNotifierError("Issue posting to Slack channel") from e
