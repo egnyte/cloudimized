@@ -41,7 +41,16 @@ class JiraNotifierTestCase(unittest.TestCase):
             configure_jiranotifier(config={"url": "", "projectKey": ""},
                                    username="test_user",
                                    password="")
-        self.assertEqual(f"Missing Jira Username/Password credentials", str(cm.exception))
+        self.assertEqual(f"Jira password/token not set in env var: 'JIRA_PSW'",
+                         str(cm.exception))
+
+    def test_configure_missing_token(self):
+        with self.assertRaises(JiraNotifierError) as cm:
+            configure_jiranotifier(config={"url": "", "projectKey": "", "isToken": True},
+                                   username="",
+                                   password="")
+        self.assertEqual(f"Jira password/token not set in env var: 'JIRA_PSW'",
+                         str(cm.exception))
 
     def test_configure_incorrect_fields_type(self):
         with self.assertRaises(JiraNotifierError) as cm:
@@ -90,6 +99,25 @@ class JiraNotifierTestCase(unittest.TestCase):
         self.assertIsInstance(result, JiraNotifier)
         mock_jiranotifier.assert_called_with(jira_url="test_url",
                                              username="test_user",
+                                             password="test_password",
+                                             issuetype="Task",
+                                             projectkey="TEST",
+                                             filter_set=None,
+                                             extra="testField")
+
+    @mock.patch("cloudimized.core.jiranotifier.JiraNotifier", spec=JiraNotifier)
+    def test_configure_correct_result_with_token_auth(self, mock_jiranotifier):
+        result = configure_jiranotifier(config={"url": "test_url",
+                                                "projectKey": "TEST",
+                                                "isToken": True,
+                                                "fields": {
+                                                    "extra": "testField"
+                                                }},
+                                        username="",
+                                        password="test_password")
+        self.assertIsInstance(result, JiraNotifier)
+        mock_jiranotifier.assert_called_with(jira_url="test_url",
+                                             username="",
                                              password="test_password",
                                              issuetype="Task",
                                              projectkey="TEST",
