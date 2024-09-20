@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 JIRA_USR = "JIRA_USR"
 JIRA_PSW = "JIRA_PSW"
+JIRA_IS_TOKEN = "isToken"
+
 
 DEFAULT_ISSUE_TYPE = "Task"
 URL = "url"
@@ -61,8 +63,12 @@ class JiraNotifier:
                 logger.info("Skipping ticket creation for non-matching project id")
                 return
         try:
-            logger.info(f"Connecting to Jira '{self.jira_url}' as '{self.username}'")
-            jira = JIRA(options={'server': self.jira_url}, basic_auth=(self.username, self.password))
+            if self.username:
+                logger.info(f"Connecting to Jira '{self.jira_url}' as '{self.username}'")
+                jira = JIRA(options={'server': self.jira_url}, basic_auth=(self.username, self.password))
+            else:
+                logger.info(f"Connecting to Jira '{self.jira_url}' using token auth")
+                jira = JIRA(options={'server': self.jira_url}, token_auth=self.password)
             summary = f"GCP manual change detected - project: {change.project}, resource: {change.resource_type}"
             # In case multiple changers were identified
             if len(change.changers) == 0:
@@ -109,8 +115,11 @@ def configure_jiranotifier(config: Dict[str, Any], username: str, password: str)
     required_keys = [URL, PROJECTKEY]
     if not all(key in config for key in required_keys):
         raise JiraNotifierError(f"Missing one of required config keys: {required_keys}")
-    if not all(key for key in [username, password]):
-        raise JiraNotifierError(f"Missing Jira Username/Password credentials")
+    if config.get(JIRA_IS_TOKEN, "false") != True:
+        if not username:
+            raise JiraNotifierError(f"Jira username not set in env var: '{JIRA_USR}' AND not using token auth")
+    if not password:
+        raise JiraNotifierError(f"Jira password/token not set in env var: '{JIRA_PSW}'")
     extra_fields = config.get(FIELDS, {})
     if not isinstance(extra_fields, dict):
         raise JiraNotifierError(f"Incorrect Jira Notifier Fields configuration. "

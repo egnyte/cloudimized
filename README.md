@@ -193,8 +193,8 @@ Cloudimized authenticates to Slack using Slack's Applications Bot User token. To
 Cloudimized authenticates to Jira using Username and Password/Token combination. Credentials are passed to script via
 env var
 
-* env var `JIRA_USR` - Jira's username
-* env var `JIRA_PSW` - Jira's password/token
+* env var `JIRA_USR` - Jira's username - (note: not set when using Token auth)
+* env var `JIRA_PSW` - Jira's password/Token
 
 ### Configuration file
 
@@ -288,6 +288,8 @@ change_processor:
      # Regex filter for selecting projects for which create issues (optional)
      filterSet:
         projectId: ".*production-only.*"
+     # Flag to indicate token use for auth instead of Username/Password
+     isToken: True
   # Terraform Runs configuration
   terraform:
     # Terraform URL
