@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.11
+
+* Update Jira notifier with token authentication
+
 ## 1.3.10
 
 * Update Slack API file upload call
