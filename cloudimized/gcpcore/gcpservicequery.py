@@ -11,7 +11,7 @@ from googleapiclient import discovery
 
 logger = logging.getLogger(__name__)
 
-SERVICE_SECTION = "services"
+SERVICE_SECTION = "gcp_services"
 SERVICE_NAME = "serviceName"
 VERSION = "version"
 QUERIES = "queries"

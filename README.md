@@ -200,7 +200,7 @@ env var
 
 Example configuration file:
 ```YAML
-services:
+gcp_services:
   # GCP API Service name - https://cloud.google.com/compute/docs/reference/rest/v1#service:-compute.googleapis.com
   - serviceName: compute
     # GCP API version - https://cloud.google.com/compute/docs/reference/rest/v1#service:-compute.googleapis.com

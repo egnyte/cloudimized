@@ -1,4 +1,4 @@
-services:
+gcp_services:
   - serviceName: compute
     version: v1
     queries:
