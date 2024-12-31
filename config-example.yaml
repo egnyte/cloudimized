@@ -1,3 +1,9 @@
+azure_queries:
+  - resource: virtualNetworks
+#    field_exclude_filter:
+#      - TBD
+#    item_exclude_filter:
+#      - TBD
 gcp_services:
   - serviceName: compute
     version: v1
