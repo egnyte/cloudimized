@@ -1,0 +1,14 @@
+resource: virtualNetworks
+field_exclude_filter:
+  - etag
+  - provisioning_state
+  - subnets:
+      - etag
+      - provisioning_state
+  - virtual_network_peerings:
+      - etag
+      - peering_state
+      - peering_sync_level
+      - provisioning_state
+#item_exclude_filter:
+#  -

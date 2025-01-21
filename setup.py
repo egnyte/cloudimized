@@ -5,6 +5,10 @@ from setuptools import setup, find_packages
 with codecs.open("README.md", encoding="utf-8") as f:
     readme = f.read()
 
+# Read dependencies from requirements.txt
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
 setup(
     name="cloudimized",
     version="1.3.11",
@@ -30,60 +34,7 @@ setup(
         "cloudimized": ["singlerunconfigs/*.yaml"]
     },
     include_package_data=True,
-    install_requires=[
-        'cachetools==4.2.4',
-        'certifi==2024.7.4',
-        'cffi==1.15.0',
-        'charset-normalizer==2.0.9',
-        'cryptography==43.0.1',
-        'defusedxml==0.7.1',
-        'flatdict==4.0.1',
-        'gitdb==4.0.9',
-        'GitPython==3.1.41',
-        'google-api-core==2.3.2',
-        'google-api-python-client==2.33.0',
-        'google-auth==2.3.3',
-        'google-auth-httplib2==0.1.0',
-        'google-cloud-appengine-logging==1.1.0',
-        'google-cloud-audit-log==0.2.0',
-        'google-cloud-core==2.2.1',
-        'google-cloud-logging==2.7.0',
-        'googleapis-common-protos==1.54.0',
-        'grpc-google-iam-v1==0.12.3',
-        'grpcio==1.53.2',
-        'grpcio-status==1.43.0',
-        'httplib2==0.20.2',
-        'idna==3.7',
-        'importlib-metadata==4.11.2',
-        'jeepney==0.7.1',
-        'jira==3.1.1',
-        'keyring==23.5.0',
-        'mock==4.0.3',
-        'oauthlib==3.2.2',
-        'packaging==21.3',
-        'proto-plus==1.19.8',
-        'protobuf==3.19.5',
-        'pyasn1==0.4.8',
-        'pyasn1-modules==0.2.8',
-        'pycparser==2.21',
-        'pyparsing==3.0.6',
-        'python-dateutil==2.8.2',
-        'PyYAML==6.0',
-        'requests==2.32.2',
-        'requests-oauthlib==1.3.1',
-        'requests-toolbelt==0.9.1',
-        'rsa==4.8',
-        'SecretStorage==3.3.1',
-        'six==1.16.0',
-        'slack-sdk==3.32.0',
-        'smmap==5.0.0',
-        'terrasnek==0.1.7',
-        'time-machine==2.5.0',
-        'typing-extensions==4.0.1',
-        'uritemplate==4.1.1',
-        'urllib3==1.26.19',
-        'zipp==3.19.1',
-    ],
+    install_requires=requirements,
     extras_require={
         "test": [
             'mock',

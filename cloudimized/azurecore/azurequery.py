@@ -1,11 +1,12 @@
 import logging
+import os
 import re
-from typing import Callable, Any, Dict, List, Union
-from copy import deepcopy
+import importlib.util
+import sys
+from typing import Any, Dict, List, Union
 from abc import ABC, abstractmethod
 from itertools import filterfalse
-from functools import reduce
-from operator import methodcaller, itemgetter
+from operator import itemgetter
 from azure.identity import DefaultAzureCredential
 
 logger = logging.getLogger(__name__)
@@ -20,9 +21,11 @@ DEFAULT_NUM_RETRIES = 3
 AGGREGATED_LIST = "aggregatedList"
 DEFAULT_SORT_FIELDS = ["name"]
 
-
 class AzureQuery(ABC):
     """A class for sending queries to Azure"""
+
+    #Registry of implementation classes
+    _registry = {}
 
     def __init__(self, resource_name: str,
                  field_exclude_filter: List = None,
@@ -50,6 +53,19 @@ class AzureQuery(ABC):
         self.num_retries = num_retries
         self.sort_fields = sort_fields
         self.kwargs = kwargs
+
+    @classmethod
+    def register_class(cls, resource_name):
+        def decorator(subclass):
+            cls._registry[resource_name] = subclass
+            return subclass
+        return decorator
+
+    @classmethod
+    def create(cls, resource_name, *args, **kwargs):
+        if resource_name not in cls._registry:
+            raise ValueError(f"Class '{resource_name}' is not registered")
+        return cls._registry[resource_name](resource_name, *args, **kwargs)
 
     def execute(self, credentials: DefaultAzureCredential, subscription_id: str) -> List[Dict]:
         """
@@ -177,7 +193,7 @@ class AzureQuery(ABC):
                 logger.debug(f"Reason: {e}")
 
 
-def configure_queries(queries: List[Dict[str, Any]]) -> Dict[str, AzureQuery]:
+def configure_azure_queries(queries: List[Dict[str, Any]]) -> Dict[str, AzureQuery]:
     """
     Configures Azure queries objects from configuration
     :param queries: per service query configuration
@@ -204,13 +220,27 @@ def configure_queries(queries: List[Dict[str, Any]]) -> Dict[str, AzureQuery]:
             "field_exclude_filter", "field_include_filter", "item_exclude_filter", "result_items_field"]),
                                   query.items()))
         try:
-            result[query[RESOURCE]] = AzureQuery(resource_name=query[RESOURCE],
+            result[query[RESOURCE]] = AzureQuery.create(resource_name=query[RESOURCE],
                                                num_retries=num_retries,
                                                sort_fields=sort_fields,
                                                 **kwargs)
         except Exception as e:
             raise AzureQueryArgumentError(f"Issue parsing query config {query}") from e
     return result
+
+#Needed to load all implementation of AzureQuery Base Class
+try:
+    impl_classes_dir = os.path.dirname(__file__)
+    for filename in os.listdir(impl_classes_dir):
+        if filename.endswith(".py") and filename not in ("azurequery.py", "__init__.py"):
+            module_name = __name__.split(".")[-1]
+            spec = importlib.util.spec_from_file_location(module_name, f"{impl_classes_dir}/{filename}")
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+except Exception as e:
+    logger.error(f"Unable to load AzureQuery classes from {impl_classes_dir}")
+    raise e
 
 
 class AzureQueryError(Exception):

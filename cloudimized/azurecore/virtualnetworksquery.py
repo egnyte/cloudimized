@@ -7,6 +7,7 @@ from azure.mgmt.network import NetworkManagementClient
 from cloudimized.azurecore.azurequery import AzureQuery
 
 
+@AzureQuery.register_class("virtualNetworks")
 class VirtualNetworksQuery(AzureQuery):
     """
     Azure query for virtual networks
