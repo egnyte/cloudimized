@@ -87,9 +87,10 @@ class GitRepo:
         file_changes = self.repo.untracked_files + [item.a_path for item in self.repo.index.diff(None)]
         result = []
         for filename in file_changes:
-            resource_type = dirname(filename)
+            provider = dirname(filename).split("/")[-2]
+            resource_type = dirname(filename).split("/")[-1]
             project = basename(filename).split(".")[0]
-            result.append(GitChange(resource_type, project))
+            result.append(GitChange(provider, resource_type, project))
         return result
 
     def commit_change(self, change: GitChange, message: str) -> None:

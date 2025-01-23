@@ -65,7 +65,7 @@ class ChangeProcessor:
         :param change_time: time of scan start/finish
         """
         # TODO: implement better time selection
-        message = f"{git_change.resource_type.title()} updated in {git_change.project}"
+        message = f"{git_change.resource_type.title()} updated in {git_change.provider.upper()}: {git_change.project}"
         manual_change = False
         skip_process_ticket = False
         try:
@@ -78,87 +78,92 @@ class ChangeProcessor:
                 return
         except Exception as e:
             logger.warning(f"Issue checking branch repo HEAD. Empty repo without commit?\n{e}\n{e.__cause__}")
-        if not change_time:
-            change_time = datetime.utcnow()
-        try:
-            logging.info(f"Retrieving GCP change logs for '{git_change.get_filename()}'")
-            gcp_change_logs = getChangeLogs(project=git_change.project,
-                                            gcp_query=self.gcp_type_queries_map[git_change.resource_type],
-                                            change_time=change_time,
-                                            time_window=self.scan_interval)
-        except Exception as e:
-            logger.warning(f"Issue getting GCP logs for change '{git_change.get_filename()}'\n{e}\n{e.__cause__}")
-            gcp_change_logs = []
-        if len(gcp_change_logs) == 1:
-            logger.info(f"Found Gcp change log for resource '{git_change.resource_type}' for "
-                        f"project '{git_change.project}'")
-        elif len(gcp_change_logs) > 1:
-            # Log multiple Gcp Log entries for analyzing and improvment in future
-            logger.info(f"Multiple Gcp change logs found for resource '{git_change.resource_type}' for "
-                        f"project '{git_change.project}'. Log count {len(gcp_change_logs)}\n{gcp_change_logs}")
-        changers = []
-        for gcp_change_log in gcp_change_logs:
-            if not gcp_change_log.changer:
-                logger.info(f"Missing changer in GCP log for change {git_change.get_filename()}\n{gcp_change_log}")
-                continue
+        # Log analysis and TF runs supported only for GCP
+        if git_change.provider == "gcp":
+            if not change_time:
+                change_time = datetime.utcnow()
             try:
-                changer_login = gcp_change_log.changer.split("@")[0]
+                logging.info(f"Retrieving GCP change logs for '{git_change.get_filename()}'")
+                gcp_change_logs = getChangeLogs(project=git_change.project,
+                                                gcp_query=self.gcp_type_queries_map[git_change.resource_type],
+                                                change_time=change_time,
+                                                time_window=self.scan_interval)
             except Exception as e:
-                logger.warning(f"Issue retrieving changer login from {gcp_change_log.changer}")
-                if gcp_change_log.changer not in changers:
-                    changers.append(gcp_change_log.changer)
-                    message += f"\n Change done by unknown user '{gcp_change_log.changer}'"
-                continue
+                logger.warning(f"Issue getting GCP logs for change '{git_change.get_filename()}'\n{e}\n{e.__cause__}")
+                gcp_change_logs = []
+            if len(gcp_change_logs) == 1:
+                logger.info(f"Found Gcp change log for resource '{git_change.resource_type}' for "
+                            f"project '{git_change.project}'")
+            elif len(gcp_change_logs) > 1:
+                # Log multiple Gcp Log entries for analyzing and improvment in future
+                logger.info(f"Multiple Gcp change logs found for resource '{git_change.resource_type}' for "
+                            f"project '{git_change.project}'. Log count {len(gcp_change_logs)}\n{gcp_change_logs}")
+            changers = []
+            for gcp_change_log in gcp_change_logs:
+                if not gcp_change_log.changer:
+                    logger.info(f"Missing changer in GCP log for change {git_change.get_filename()}\n{gcp_change_log}")
+                    continue
+                try:
+                    changer_login = gcp_change_log.changer.split("@")[0]
+                except Exception as e:
+                    logger.warning(f"Issue retrieving changer login from {gcp_change_log.changer}")
+                    if gcp_change_log.changer not in changers:
+                        changers.append(gcp_change_log.changer)
+                        message += f"\n Change done by unknown user '{gcp_change_log.changer}'"
+                    continue
 
-            if changer_login in changers:
-                # Skip lookup for same changer
-                logger.info(f"Skipping lookup for changer '{changer_login}'")
-                continue
-            else:
-                changers.append(changer_login)
-            if not re.match(rf"{self.service_account_regex}", gcp_change_log.changer):
-                # Manual change
-                git_change.manual = True
-                logger.info(f"Manual change performed by '{changer_login}' detected")
-                message += f"\n MANUAL change done by {changer_login}"
-            else:
-                message += f"\n Terraform change done by {changer_login}"
-                # Process only if tf_query is set
-                if self.tf_query:
-                    logger.info(f"Retrieving Terraform Runs for service account '{changer_login}'")
-                    try:
-                        tf_runs = self.tf_query.get_runs(gcp_sa=changer_login)
-                    except TFQueryError as e:
-                        logger.warning(f"Issue getting terraform runs for GCP log {gcp_change_log}\n{e}\n{e.__cause__}")
-                        continue
-                    if not (self.ticket_regex and self.ticket_sys_url):
-                        logger.info(f"Skipping ticket processing - ticket regex and/or ticketing URL not set")
-                        skip_process_ticket = True
-                    for tf_run in tf_runs:
-                        if tf_run.status not in CHANGE_TF_RUN_STATE:
-                            logger.info(f"Skipping processing non-change Terraform Run '{tf_run}")
+                if changer_login in changers:
+                    # Skip lookup for same changer
+                    logger.info(f"Skipping lookup for changer '{changer_login}'")
+                    continue
+                else:
+                    changers.append(changer_login)
+                if not re.match(rf"{self.service_account_regex}", gcp_change_log.changer):
+                    # Manual change
+                    git_change.manual = True
+                    logger.info(f"Manual change performed by '{changer_login}' detected")
+                    message += f"\n MANUAL change done by {changer_login}"
+                else:
+                    message += f"\n Terraform change done by {changer_login}"
+                    # Process only if tf_query is set
+                    if self.tf_query:
+                        logger.info(f"Retrieving Terraform Runs for service account '{changer_login}'")
+                        try:
+                            tf_runs = self.tf_query.get_runs(gcp_sa=changer_login)
+                        except TFQueryError as e:
+                            logger.warning(f"Issue getting terraform runs for GCP log {gcp_change_log}\n{e}\n{e.__cause__}")
                             continue
-                        logger.info(f"Processing Terraform run: {tf_run}")
-                        run_url = (f"{self.tf_query.tf_url}/app/{tf_run.org}/workspaces/{tf_run.workspace}/runs/"
-                                   f"{tf_run.run_id}")
-                        message += f"\n Related TF run {run_url}"
-                        if not skip_process_ticket:
-                            ticket_match = re.search(rf"{self.ticket_regex}", tf_run.message)
-                            if ticket_match:
-                                try:
-                                    ticket = ticket_match.group(1)
-                                except Exception as e:
-                                    logger.warning(f"Issue retrieving ticket number from "
-                                                   f"run '{tf_run}'\n{e}\n{e.__cause__}")
-                                    continue
-                                # TODO Parametrize string replacement
-                                message += f"\n Related ticket {self.ticket_sys_url}/{ticket.replace('_', '-')}"
-        # Add least one changer has been identified
-        if changers:
-            git_change.message = message
-            git_change.changers = changers
+                        if not (self.ticket_regex and self.ticket_sys_url):
+                            logger.info(f"Skipping ticket processing - ticket regex and/or ticketing URL not set")
+                            skip_process_ticket = True
+                        for tf_run in tf_runs:
+                            if tf_run.status not in CHANGE_TF_RUN_STATE:
+                                logger.info(f"Skipping processing non-change Terraform Run '{tf_run}")
+                                continue
+                            logger.info(f"Processing Terraform run: {tf_run}")
+                            run_url = (f"{self.tf_query.tf_url}/app/{tf_run.org}/workspaces/{tf_run.workspace}/runs/"
+                                       f"{tf_run.run_id}")
+                            message += f"\n Related TF run {run_url}"
+                            if not skip_process_ticket:
+                                ticket_match = re.search(rf"{self.ticket_regex}", tf_run.message)
+                                if ticket_match:
+                                    try:
+                                        ticket = ticket_match.group(1)
+                                    except Exception as e:
+                                        logger.warning(f"Issue retrieving ticket number from "
+                                                       f"run '{tf_run}'\n{e}\n{e.__cause__}")
+                                        continue
+                                    # TODO Parametrize string replacement
+                                    message += f"\n Related ticket {self.ticket_sys_url}/{ticket.replace('_', '-')}"
+            # Add least one changer has been identified
+            if changers:
+                git_change.message = message
+                git_change.changers = changers
+            else:
+                message += f"\n Unable to identify changer"
+                git_change.message = message
+        # All other providers. Only Azure for now
         else:
-            message += f"\n Unable to identify changer"
             git_change.message = message
         logger.info(f"Committing change '{git_change.get_filename()}'")
         self.repo.repo.git.commit(m=message)

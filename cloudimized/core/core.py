@@ -33,9 +33,15 @@ SINGLE_RUN_CONFIGS_DIR = "singlerunconfigs"
 
 # Configuration file - key names
 GCP_QUERIES = "queries"
+## GCP
 DISCOVER_PROJECTS_KEY = "discover_projects"
 EXCLUDED_PROJECTS_KEY = "excluded_projects"
 PROJECTS_LIST_KEY = "project_list"
+## Azure
+DISCOVER_SUBSCRIPTIONS_KEY = "discover_subscriptions"
+EXCLUDED_SUBSCRIPTIONS_KEY = "excluded_subscriptions"
+SUBSCRIPTIONS_LIST_KEY = "subscriptions_list"
+## Other
 SCAN_INTERVAL = "scan_interval"
 THREAD_COUNT = "thread_count"
 
@@ -80,10 +86,15 @@ class Cloudimizer:
         self.gcp_type_queries_map = {}
         self.git_repo = None
         self.tf_query = None
+        # GCP
         self.do_project_discovery = None
         self.excluded_projects = None
-        self.projects = None #GCP
-        self.subscriptions = None #Azure
+        self.projects = None
+        # Azure
+        self.do_subscription_discovery = None
+        self.excluded_subscriptions = None
+        self.subscriptions = None
+        ##
         self.run_results = None
         self.change_processor = None
         self.thread_count = None
@@ -212,9 +223,15 @@ class Cloudimizer:
             raise CloudimizerConfigException(f"Issue with ChangeProcessor config") from e
         # TODO Add type checking for below options
         # TODO Add config check when discovery list is disabled and project list is not provided
+        # GCP
         self.do_project_discovery = config.get(DISCOVER_PROJECTS_KEY, "False")
         self.excluded_projects = config.get(EXCLUDED_PROJECTS_KEY, [])
         self.projects = config.get(PROJECTS_LIST_KEY, None)  # TODO Add logic to detect if list is not set
+        # Azure
+        self.do_subscription_discovery = config.get(DISCOVER_SUBSCRIPTIONS_KEY, "False")
+        self.excluded_subscriptions = config.get(EXCLUDED_SUBSCRIPTIONS_KEY, [])
+        self.subscriptions = config.get(SUBSCRIPTIONS_LIST_KEY, None) # TODO Add logic to detect if list is not set
+        ##
         self.thread_count = config.get(THREAD_COUNT, 3)
         # TODO Move logging setup at the beggining
         self.set_logging(self.loglevel)
@@ -387,11 +404,19 @@ class Cloudimizer:
             self.git_repo.setup()
         except GitRepoError as e:
             logger.critical(f"Error setting up Git Repo: '{self.git_repo.repo_url}'\n{e}\n{e.__cause__}")
+        # GCP
         if self.do_project_discovery:
             try:
                 self.discover_projects()
             except Exception as e:
-                logger.critical(f"Issue during projects discovery\n{e}\n{e.__cause__}")
+                logger.critical(f"Issue during GCP projects discovery\n{e}\n{e.__cause__}")
+                sys.exit(1)
+        # Azure
+        if self.do_subscription_discovery:
+            try:
+                self.discover_azure_subscriptions()
+            except Exception as e:
+                logger.critical(f"Issue during Azure subscriptions discovery\n{e}\n{e.__cause__}")
                 sys.exit(1)
         # Clean repo
         try:
@@ -401,7 +426,12 @@ class Cloudimizer:
             logger.critical(f"Issue during Git repo preparation\n{e}\n{e.__cause__}")
             sys.exit(1)
         # Run all queries
+        ## GCP
+        logger.info(f"Running all GCP queries")
         self.run_queries()
+        ## Azure
+        logger.info(f"Running all Azure queries")
+        self.run_azure_queries()
         # Dump results to files
         try:
             self.run_results.dump_results(directory=self.git_repo.directory)
