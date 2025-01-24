@@ -8,9 +8,15 @@ import yaml
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from azure.identity import DefaultAzureCredential
+
 from cloudimized.core.changeprocessor import configure_change_processor, ChangeProcessorError, CHANGE_PROCESSOR
-from cloudimized.core.result import set_query_results_from_configuration, QueryResultError
+from cloudimized.core.result import set_query_results_from_configuration, QueryResultError, GCP_KEY, AZURE_KEY
 from cloudimized.core.slacknotifier import SLACK_TOKEN
+from cloudimized.azurecore.azurecredential import get_azure_credential
+from cloudimized.azurecore.azurequery import AZURE_QUERIES_SECTION, configure_azure_queries, AzureQuery, \
+    AzureQueryArgumentError, AzureQueryError
+from cloudimized.azurecore.subscriptionsquery import SUBSCRIPTIONS_RESOURCE_NAME
 from cloudimized.gcpcore.gcpquery import RESOURCE, GCP_API_CALL, RESULT_ITEMS_FIELD, ITEM_EXCLUDE_FILTER, \
     GCP_LOG_RESOURCE_TYPE
 from cloudimized.gcpcore.gcpquery import configure_queries, GcpQueryArgumentError, GcpQueryError
@@ -27,9 +33,15 @@ SINGLE_RUN_CONFIGS_DIR = "singlerunconfigs"
 
 # Configuration file - key names
 GCP_QUERIES = "queries"
+## GCP
 DISCOVER_PROJECTS_KEY = "discover_projects"
 EXCLUDED_PROJECTS_KEY = "excluded_projects"
 PROJECTS_LIST_KEY = "project_list"
+## Azure
+DISCOVER_SUBSCRIPTIONS_KEY = "discover_subscriptions"
+EXCLUDED_SUBSCRIPTIONS_KEY = "excluded_subscriptions"
+SUBSCRIPTIONS_LIST_KEY = "subscriptions_list"
+## Other
 SCAN_INTERVAL = "scan_interval"
 THREAD_COUNT = "thread_count"
 
@@ -53,9 +65,9 @@ PROJECTS_DISCOVERY_SERVICE_CONFIG = [
 ]
 
 
-class GcpOxidizer:
+class Cloudimizer:
     """
-    GcpOxidizer main class
+    Cloudimizer main class
     """
 
     def __init__(self):
@@ -66,15 +78,23 @@ class GcpOxidizer:
             self.arg_output,
             self.arg_list,
             self.arg_describe,
-            self.arg_name
+            self.arg_name,
+            self.arg_provider
         ) = self.parse_args()
         self.gcp_services = None
+        self.azure_queries = None
         self.gcp_type_queries_map = {}
         self.git_repo = None
         self.tf_query = None
+        # GCP
         self.do_project_discovery = None
         self.excluded_projects = None
         self.projects = None
+        # Azure
+        self.do_subscription_discovery = None
+        self.excluded_subscriptions = None
+        self.subscriptions = None
+        ##
         self.run_results = None
         self.change_processor = None
         self.thread_count = None
@@ -87,11 +107,11 @@ class GcpOxidizer:
             if self.arg_describe:
                 self.describe_singlerun_configs(self.arg_name)
                 sys.exit(0)
-            self.set_single_run(resource_name=self.arg_name)
+            self.set_single_run(resource_name=self.arg_name, provider_name=self.arg_provider)
             self.set_logging(self.loglevel)
 
     def parse_args(self):
-        parser = argparse.ArgumentParser("Runs GCP oxidizer",
+        parser = argparse.ArgumentParser("Runs Cloudimizer",
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument("-c", "--config", default=CONFIG_FILE, help="Configuration file")
         parser.add_argument("-l", "--loglevel", default="INFO", help="Set logging level",
@@ -101,12 +121,19 @@ class GcpOxidizer:
         singlerun_group.add_argument("--list", action="store_true", help="List single run configs")
         singlerun_group.add_argument("-d", "--describe", action="store_true", help="Print single run config")
         singlerun_group.add_argument("-n", "--name", type=str, help="Name of single run config")
+        singlerun_group.add_argument("-p", "--provider", choices=["gcp", "azure"],
+                                     help="Cloud provider selection")
         singlerun_group.add_argument("-o", "--output", default="yaml", choices=["yaml", "csv"],
                                      help="Output file format")
         args = parser.parse_args()
+
+
         # Name has to be set if running singlerun (except listing)
         if (args.singlerun == True and args.list == False and args.name is None):
             parser.error("--name is required in singlerun mode")
+        # Provided is required in singlerun mode
+        if (args.singlerun == True and args.list == False and args.provider is None):
+            parser.error("--provider is required in singlerun mode")
         return (
             args.config,
             args.loglevel,
@@ -114,7 +141,8 @@ class GcpOxidizer:
             args.output,
             args.list,
             args.describe,
-            args.name
+            args.name,
+            args.provider
         )
 
     def list_singlerun_configs(self):
@@ -143,47 +171,57 @@ class GcpOxidizer:
         Read in and parse configuration file
         """
         if not self.config_file:
-            raise GcpOxidizerConfigException("No config file provided")
+            raise CloudimizerConfigException("No config file provided")
         try:
             with open(self.config_file) as fh:
                 config = yaml.safe_load(fh)
         except yaml.YAMLError as e:
-            raise GcpOxidizerConfigException(f"Error in yaml file format: '{self.config_file}'") from e
+            raise CloudimizerConfigException(f"Error in yaml file format: '{self.config_file}'") from e
         except Exception as e:
-            raise GcpOxidizerConfigException(f"Issue opening config file {self.config_file}") from e
+            raise CloudimizerConfigException(f"Issue opening config file {self.config_file}") from e
         # Check if config file is not empty
         if not config:
-            raise GcpOxidizerConfigException(f"Configuration file is empty: {self.config_file}")
+            raise CloudimizerConfigException(f"Configuration file is empty: {self.config_file}")
+        # GCP queries
         gcp_service_queries = config.get(SERVICE_SECTION, None)
+        if gcp_service_queries:
+            try:
+                self.gcp_services = configure_services(gcp_service_queries)
+            except GcpServiceQueryConfigError as e:
+                raise CloudimizerConfigException(f"Error in configuration file in section: '{SERVICE_SECTION}'") from e
+            try:
+                for service in gcp_service_queries:
+                    serviceName = service[SERVICE_NAME]
+                    queries = configure_queries(service[GCP_QUERIES])
+                    self.gcp_services[serviceName].queries = queries
+                    self.gcp_type_queries_map.update(queries)
+            except GcpQueryArgumentError as e:
+                raise CloudimizerConfigException(f"Incorrect GCP query configuration in section: '{serviceName}'") from e
+        # Azure queries
+        azure_queries = config.get(AZURE_QUERIES_SECTION, None)
+        if azure_queries:
+            try:
+                self.azure_queries = configure_azure_queries(azure_queries)
+            except AzureQueryArgumentError as e:
+                raise CloudimizerConfigException(f"Error in configuration file in section: '{AZURE_QUERIES_SECTION}") \
+                    from e
         try:
-            self.gcp_services = configure_services(gcp_service_queries)
-        except GcpServiceQueryConfigError as e:
-            raise GcpOxidizerConfigException(f"Error in configuration file in section: '{SERVICE_SECTION}'") from e
-        try:
-            for service in gcp_service_queries:
-                serviceName = service[SERVICE_NAME]
-                queries = configure_queries(service[GCP_QUERIES])
-                self.gcp_services[serviceName].queries = queries
-                self.gcp_type_queries_map.update(queries)
-        except GcpQueryArgumentError as e:
-            raise GcpOxidizerConfigException(f"Incorrect GCP query configuration in section: '{serviceName}'") from e
-        try:
-            self.run_results = set_query_results_from_configuration(self.gcp_services)
+            self.run_results = set_query_results_from_configuration(self.gcp_services, self.azure_queries)
         except QueryResultError as e:
-            raise GcpOxidizerConfigException(f"Error in service/query configuration") from e
+            raise CloudimizerConfigException(f"Error in service/query configuration") from e
         try:
             self.git_repo = configure_repo(user=os.getenv(GIT_USER),
                                            password=os.getenv(GIT_PASSWORD),
                                            config=config.get(GIT_SECTION))
         except GitRepoConfigError as e:
-            raise GcpOxidizerConfigException(f"Error in Git configuration") from e
+            raise CloudimizerConfigException(f"Error in Git configuration") from e
         # try:
         #     self.tf_query = configure_tfquery(config.get(TERRAFORM_SECTION))
         # except TFQueryConfigurationError as e:
         #     raise GcpOxidizerConfigException(f"Error in Terraform configuration") from e
         change_processor_config = config.get(CHANGE_PROCESSOR, None)
         if configure_change_processor is None:
-            raise GcpOxidizerConfigException(f"Missing required section {CHANGE_PROCESSOR}")
+            raise CloudimizerConfigException(f"Missing required section {CHANGE_PROCESSOR}")
         try:
             self.change_processor = configure_change_processor(config=change_processor_config,
                                                                gcp_type_queries_map=self.gcp_type_queries_map,
@@ -192,45 +230,58 @@ class GcpOxidizer:
                                                                jira_user=os.getenv(JIRA_USR),
                                                                jira_token=os.getenv(JIRA_PSW))
         except ChangeProcessorError as e:
-            raise GcpOxidizerConfigException(f"Issue with ChangeProcessor config") from e
+            raise CloudimizerConfigException(f"Issue with ChangeProcessor config") from e
         # TODO Add type checking for below options
         # TODO Add config check when discovery list is disabled and project list is not provided
+        # GCP
         self.do_project_discovery = config.get(DISCOVER_PROJECTS_KEY, "False")
         self.excluded_projects = config.get(EXCLUDED_PROJECTS_KEY, [])
         self.projects = config.get(PROJECTS_LIST_KEY, None)  # TODO Add logic to detect if list is not set
+        # Azure
+        self.do_subscription_discovery = config.get(DISCOVER_SUBSCRIPTIONS_KEY, "False")
+        self.excluded_subscriptions = config.get(EXCLUDED_SUBSCRIPTIONS_KEY, [])
+        self.subscriptions = config.get(SUBSCRIPTIONS_LIST_KEY, None) # TODO Add logic to detect if list is not set
+        ##
         self.thread_count = config.get(THREAD_COUNT, 3)
         # TODO Move logging setup at the beggining
         self.set_logging(self.loglevel)
 
-    def set_single_run(self, resource_name: str):
+    def set_single_run(self, resource_name: str, provider_name: str):
         """
         Prepare configuration for single run mode
         :param resource_name: GCP resource name to scan
         """
         try:
             script_dir = os.path.dirname(__file__)
-            filename = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}/{resource_name}.yaml"
+            filename = f"{script_dir}/../{SINGLE_RUN_CONFIGS_DIR}/{provider_name}/{resource_name}.yaml"
             with open(filename) as fh:
                 service = yaml.safe_load(fh)
         except yaml.YAMLError as e:
-            raise GcpOxidizerConfigException(f"Error opening yaml file: '{filename}'") from e
+            raise CloudimizerConfigException(f"Error opening yaml file: '{filename}'") from e
+        if provider_name == "gcp":
+            try:
+                self.gcp_services = configure_services([service])
+            except GcpServiceQueryConfigError as e:
+                raise CloudimizerConfigException(f"Error in service config in file: '{filename}'") from e
+            try:
+                serviceName = service[SERVICE_NAME]
+                queries = configure_queries(service[GCP_QUERIES])
+                self.gcp_services[serviceName].queries = queries
+                self.gcp_type_queries_map.update(queries)
+            except GcpQueryArgumentError as e:
+                raise CloudimizerConfigException(f"Error in query config in file: '{filename}'") from e
+        elif provider_name == "azure":
+            try:
+                self.azure_queries = configure_azure_queries([service])
+            except AzureQueryArgumentError as e:
+                raise CloudimizerConfigException(f"Error in service config in file: '{filename}'") from e
+        else:
+            raise CloudimizerConfigException(f"Unknown provider: {provider_name}")
         try:
-            self.gcp_services = configure_services([service])
-        except GcpServiceQueryConfigError as e:
-            raise GcpOxidizerConfigException(f"Error in service config in file: '{filename}'") from e
-        try:
-            serviceName = service[SERVICE_NAME]
-            queries = configure_queries(service[GCP_QUERIES])
-            self.gcp_services[serviceName].queries = queries
-            self.gcp_type_queries_map.update(queries)
-        except GcpQueryArgumentError as e:
-            raise GcpOxidizerConfigException(f"Error in query config in file: '{filename}'") from e
-        try:
-            self.run_results = set_query_results_from_configuration(self.gcp_services)
+            self.run_results = set_query_results_from_configuration(self.gcp_services, self.azure_queries)
         except QueryResultError as e:
-            raise GcpOxidizerConfigException(f"Error in service/query configuration") from e
+            raise CloudimizerConfigException(f"Error in service/query configuration") from e
         self.excluded_projects = []
-
 
 
     def set_logging(self, loglevel: str):
@@ -240,6 +291,7 @@ class GcpOxidizer:
         """
         logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=loglevel)
 
+    #For GCP projects discovery
     def discover_projects(self) -> None:
         """
         Performs discovery of all GCP projects
@@ -257,6 +309,19 @@ class GcpOxidizer:
         # Filter out exclude projects
         self.projects = [projectId for projectId in all_projects if projectId not in self.excluded_projects]
         logger.info(f"Discovered {len(result)} projects")
+
+    #For Azure subscriptions discovery
+    def discover_azure_subscriptions(self) -> None:
+        """
+        Performs discovery of all available subscriptions IDs
+        """
+        logger.info(f"Performing Azure subscriptions discovery")
+        query = AzureQuery.create(resource_name=SUBSCRIPTIONS_RESOURCE_NAME)
+        credentials = get_azure_credential()
+        raw_result = query.execute(credentials, None)
+        result = [subscription['subscription_id'] for subscription in raw_result]
+        self.subscriptions = result
+        logger.info(f"Discovered {len(result)} Azure subscriptions")
 
     def run_queries(self) -> None:
         """
@@ -280,21 +345,61 @@ class GcpOxidizer:
                             if len(result) == 0:
                                 logger.info(f"No '{resource_name}' resources found for project '{future.project_id}'")
                                 continue
-                            self.run_results.add_result(resource_name, future.project_id, result)
+                            self.run_results.add_result(resource_name=resource_name,
+                                                        provider=GCP_KEY,
+                                                        target_id=future.project_id,
+                                                        result=result)
                         except GcpQueryError as e:
                             logger.warning(f"Issue when performing query for resource '{resource_name} "
                                            f"for project '{future.project_id}\n{e}\n{e.__cause__}")
                             #TODO: Add handling of failed queries i.e. error stats at the end
 
+    def run_azure_queries(self) -> None:
+        """
+        Execute all configured Azure queries and gather results
+        """
+        local = threading.local()
+        with ThreadPoolExecutor(max_workers=self.thread_count, initializer=initializer_azure_worker,
+                                initargs=(local,)) as executor:
+            for resource_name, query in self.azure_queries.items():
+                logger.info(f"Querying configuration for resource '{resource_name}'")
+                futures = []
+                for subscription_id in self.subscriptions:
+                    future = executor.submit(query_azure_task, query.execute, subscription_id, local)
+                    future.subscription_id = subscription_id
+                    futures.append(future)
+                for future in as_completed(futures):
+                    try:
+                        result = future.result()
+                        if len(result) == 0:
+                            logger.info(f"No '{resource_name}' resources found for subscription '{future.subscription_id}'")
+                            continue
+                        self.run_results.add_result(resource_name=resource_name,
+                                                    provider=AZURE_KEY,
+                                                    target_id=future.subscription_id,
+                                                    result=result)
+                    except AzureQueryError as e:
+                        logger.warning(f"Issue when performing query for resource '{resource_name} "
+                                       f"for subscription '{future.subscription_id}\n{e}\n{e.__cause__}")
+                        # TODO: Add handling of failed queries i.e. error stats at the end
+
     def singlerun_mode(self):
-        # Discover all projects
-        try:
-            self.discover_projects()
-        except Exception as e:
-            logger.critical(f"Issue during projects discovery\n{e}\n{e.__cause__}")
-            sys.exit(1)
-        # Run queries
-        self.run_queries()
+        if self.arg_provider == "gcp":
+            # Discover all projects
+            try:
+                self.discover_projects()
+            except Exception as e:
+                logger.critical(f"Issue during projects discovery\n{e}\n{e.__cause__}")
+                sys.exit(1)
+            self.run_queries()
+        elif self.arg_provider == "azure":
+            #Discover all subscriptions
+            try:
+                self.discover_azure_subscriptions()
+            except Exception as e:
+                logger.critical(f"Issue during subscriptions discovery\n{e}\n{e.__cause__}")
+                sys.exit(1)
+            self.run_azure_queries()
         # Dump results to files
         try:
             if self.arg_output == "csv":
@@ -309,11 +414,19 @@ class GcpOxidizer:
             self.git_repo.setup()
         except GitRepoError as e:
             logger.critical(f"Error setting up Git Repo: '{self.git_repo.repo_url}'\n{e}\n{e.__cause__}")
+        # GCP
         if self.do_project_discovery:
             try:
                 self.discover_projects()
             except Exception as e:
-                logger.critical(f"Issue during projects discovery\n{e}\n{e.__cause__}")
+                logger.critical(f"Issue during GCP projects discovery\n{e}\n{e.__cause__}")
+                sys.exit(1)
+        # Azure
+        if self.do_subscription_discovery:
+            try:
+                self.discover_azure_subscriptions()
+            except Exception as e:
+                logger.critical(f"Issue during Azure subscriptions discovery\n{e}\n{e.__cause__}")
                 sys.exit(1)
         # Clean repo
         try:
@@ -323,7 +436,14 @@ class GcpOxidizer:
             logger.critical(f"Issue during Git repo preparation\n{e}\n{e.__cause__}")
             sys.exit(1)
         # Run all queries
-        self.run_queries()
+        ## GCP
+        if self.gcp_services:
+            logger.info(f"Running all GCP queries")
+            self.run_queries()
+        ## Azure
+        if self.azure_queries:
+            logger.info(f"Running all Azure queries")
+            self.run_azure_queries()
         # Dump results to files
         try:
             self.run_results.dump_results(directory=self.git_repo.directory)
@@ -358,6 +478,17 @@ def initializer_worker(local, service: GcpServiceQuery):
     except Exception as e:
         logger.warning(f"Issue building service {service.serviceName}\n{e}\n{e.__cause__}")
 
+def initializer_azure_worker(local):
+    """
+    Initializer function for Query execute threads
+    :param local: theading.local() instance
+    """
+    logger.info(f"Creating Azure credentials object for thread {threading.get_ident()}")
+    try:
+        local.credential = get_azure_credential()
+    except Exception as e:
+        logger.warning(f"Issue getting Azure credentials\n{e}\n{e.__cause__}")
+
 
 def query_task(query_function, project_id, local):
     """
@@ -369,24 +500,34 @@ def query_task(query_function, project_id, local):
     return query_function(local.service, project_id)
 
 
+def query_azure_task(query_function, subscription_id, local):
+    """
+    Wrapper for query function for multithreading
+    :param query_function: query execute function
+    :param subscription_id: Azure subscription ID to scan
+    :param local: thread local variable
+    """
+    return query_function(local.credential, subscription_id)
+
+
 def execute():
     try:
         # Setup and parse configuraiton
-        gcpoxidizer = GcpOxidizer()
-    except GcpOxidizerConfigException as e:
-        logger.critical(f"Error in GcpOxidizer configuration\n{e}\n{e.__cause__}")
+        cloudimizer = Cloudimizer()
+    except CloudimizerConfigException as e:
+        logger.critical(f"Error in Cloudimizer configuration\n{e}\n{e.__cause__}")
         sys.exit(1)
-    if not gcpoxidizer.arg_singlerun:
+    if not cloudimizer.arg_singlerun:
         logger.info("Running in main mode")
-        gcpoxidizer.main_mode()
+        cloudimizer.main_mode()
     else:
         logger.info("Running in single run mode")
-        gcpoxidizer.singlerun_mode()
+        cloudimizer.singlerun_mode()
 
 
-class GcpOxidizerException(Exception):
+class CloudimizerException(Exception):
     pass
 
 
-class GcpOxidizerConfigException(GcpOxidizerException):
+class CloudimizerConfigException(CloudimizerException):
     pass

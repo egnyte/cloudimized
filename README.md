@@ -95,6 +95,10 @@ selected Folders and/or Projects.
 See:
 * [Google Cloud listing permissions](https://cloud.google.com/resource-manager/docs/listing-all-resources)
 
+#### Azure Applicaton (optional)
+
+#TODO
+
 #### GIT Service Account
 
 GIT Service Account is used to get configuration repository from remote and pushing to that repo detected configuration changes.
@@ -196,11 +200,21 @@ env var
 * env var `JIRA_USR` - Jira's username - (note: not set when using Token auth)
 * env var `JIRA_PSW` - Jira's password/Token
 
+#### Azure secrets
+
+For a scenario when authentication to Azure is done via
+[Workload Identity Federation](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation) and
+using [Azure app to authenticate via external Identity Provider](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp)
+following env var need to be set ([see docs](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp))
+
+* `AZURE_CLIENT_ID` - Azure's Application's (Client) ID
+* `AZURE_TENANT_ID` - Azure's Application's Directory (Tenant) ID
+
 ### Configuration file
 
 Example configuration file:
 ```YAML
-services:
+gcp_services:
   # GCP API Service name - https://cloud.google.com/compute/docs/reference/rest/v1#service:-compute.googleapis.com
   - serviceName: compute
     # GCP API version - https://cloud.google.com/compute/docs/reference/rest/v1#service:-compute.googleapis.com
@@ -317,7 +331,7 @@ functions (no Git, Terraform, Slack, Jira interaction and no GCP logs lookup).
 cloudimized --singlerun/-s <RESOURCE_NAME> --output/-o {yaml, csv}
 
 i.e
-cloudimized -s addresses -o csv
+cloudimized -s -v gcp addresses -o csv
 ```
 
 ### Configuration

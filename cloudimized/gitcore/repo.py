@@ -87,9 +87,18 @@ class GitRepo:
         file_changes = self.repo.untracked_files + [item.a_path for item in self.repo.index.diff(None)]
         result = []
         for filename in file_changes:
-            resource_type = dirname(filename)
+            #Needed for trasitioning from old directory structure
+            ## When Azure support was added
+            dir_path = dirname(filename).split("/")
+            if len(dir_path) == 2:
+                provider = dir_path[-2]
+                is_old_structure = False
+            else:
+                provider = "gcp"
+                is_old_structure = True
+            resource_type = dir_path[-1]
             project = basename(filename).split(".")[0]
-            result.append(GitChange(resource_type, project))
+            result.append(GitChange(provider, resource_type, project, is_old_structure))
         return result
 
     def commit_change(self, change: GitChange, message: str) -> None:
