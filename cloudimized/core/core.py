@@ -14,8 +14,8 @@ from cloudimized.core.changeprocessor import configure_change_processor, ChangeP
 from cloudimized.core.result import set_query_results_from_configuration, QueryResultError, GCP_KEY, AZURE_KEY
 from cloudimized.core.slacknotifier import SLACK_TOKEN
 from cloudimized.azurecore.azurecredential import get_azure_credential
-from cloudimized.azurecore.azurequery import configure_azure_queries, AzureQuery, AzureQueryArgumentError, \
-    AzureQueryError
+from cloudimized.azurecore.azurequery import AZURE_QUERIES_SECTION, configure_azure_queries, AzureQuery, \
+    AzureQueryArgumentError, AzureQueryError
 from cloudimized.azurecore.subscriptionsquery import SUBSCRIPTIONS_RESOURCE_NAME
 from cloudimized.gcpcore.gcpquery import RESOURCE, GCP_API_CALL, RESULT_ITEMS_FIELD, ITEM_EXCLUDE_FILTER, \
     GCP_LOG_RESOURCE_TYPE
@@ -182,21 +182,31 @@ class Cloudimizer:
         # Check if config file is not empty
         if not config:
             raise CloudimizerConfigException(f"Configuration file is empty: {self.config_file}")
+        # GCP queries
         gcp_service_queries = config.get(SERVICE_SECTION, None)
+        if gcp_service_queries:
+            try:
+                self.gcp_services = configure_services(gcp_service_queries)
+            except GcpServiceQueryConfigError as e:
+                raise CloudimizerConfigException(f"Error in configuration file in section: '{SERVICE_SECTION}'") from e
+            try:
+                for service in gcp_service_queries:
+                    serviceName = service[SERVICE_NAME]
+                    queries = configure_queries(service[GCP_QUERIES])
+                    self.gcp_services[serviceName].queries = queries
+                    self.gcp_type_queries_map.update(queries)
+            except GcpQueryArgumentError as e:
+                raise CloudimizerConfigException(f"Incorrect GCP query configuration in section: '{serviceName}'") from e
+        # Azure queries
+        azure_queries = config.get(AZURE_QUERIES_SECTION, None)
+        if azure_queries:
+            try:
+                self.azure_queries = configure_azure_queries(azure_queries)
+            except AzureQueryArgumentError as e:
+                raise CloudimizerConfigException(f"Error in configuration file in section: '{AZURE_QUERIES_SECTION}") \
+                    from e
         try:
-            self.gcp_services = configure_services(gcp_service_queries)
-        except GcpServiceQueryConfigError as e:
-            raise CloudimizerConfigException(f"Error in configuration file in section: '{SERVICE_SECTION}'") from e
-        try:
-            for service in gcp_service_queries:
-                serviceName = service[SERVICE_NAME]
-                queries = configure_queries(service[GCP_QUERIES])
-                self.gcp_services[serviceName].queries = queries
-                self.gcp_type_queries_map.update(queries)
-        except GcpQueryArgumentError as e:
-            raise CloudimizerConfigException(f"Incorrect GCP query configuration in section: '{serviceName}'") from e
-        try:
-            self.run_results = set_query_results_from_configuration(self.gcp_services)
+            self.run_results = set_query_results_from_configuration(self.gcp_services, self.azure_queries)
         except QueryResultError as e:
             raise CloudimizerConfigException(f"Error in service/query configuration") from e
         try:
@@ -427,11 +437,13 @@ class Cloudimizer:
             sys.exit(1)
         # Run all queries
         ## GCP
-        logger.info(f"Running all GCP queries")
-        self.run_queries()
+        if self.gcp_services:
+            logger.info(f"Running all GCP queries")
+            self.run_queries()
         ## Azure
-        logger.info(f"Running all Azure queries")
-        self.run_azure_queries()
+        if self.azure_queries:
+            logger.info(f"Running all Azure queries")
+            self.run_azure_queries()
         # Dump results to files
         try:
             self.run_results.dump_results(directory=self.git_repo.directory)

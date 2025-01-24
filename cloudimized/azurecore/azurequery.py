@@ -11,6 +11,7 @@ from azure.identity import DefaultAzureCredential
 
 logger = logging.getLogger(__name__)
 
+AZURE_QUERIES_SECTION = "azure_queries"
 RESOURCE = "resource"
 ITEM_EXCLUDE_FILTER = "item_exclude_filter"
 NUM_RETRIES = "num_retries"

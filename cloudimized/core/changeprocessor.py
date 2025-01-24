@@ -176,7 +176,8 @@ class ChangeProcessor:
                 self.slack_notifier.post(git_change)
             except SlackNotifierError as e:
                 logger.warning(f"Issue sending message to Slack\n{e}\n{e.__cause__}")
-        if self.jira_notifier:
+        #Only supported for GCP changes
+        if git_change.provider == "gcp" and self.jira_notifier:
             try:
                 self.jira_notifier.post(git_change)
             except JiraNotifierError as e:

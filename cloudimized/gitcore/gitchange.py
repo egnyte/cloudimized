@@ -11,15 +11,17 @@ class GitChange:
     Represents configuration change in resources
     """
 
-    def __init__(self, provider: str, resource_type: str, project: str):
+    def __init__(self, provider: str, resource_type: str, project: str, is_old_structure: str=False):
         """
         :param provider: name of provider [azure, gcp]
         :param resource_type: GCP/Azure resource type
         :param project: GCP/Azure project name
+        :param is_old_structure: used for transition when Azure support was added
         """
         self.provider = provider
         self.resource_type = resource_type
         self.project = project
+        self.is_old_structure = is_old_structure
         self.message = None
         self.diff = None
         self.manual = False
@@ -34,7 +36,10 @@ class GitChange:
         """
         Provides file where configuration is stored
         """
-        return f"{self.provider}/{self.resource_type}/{self.project}.yaml"
+        if self.is_old_structure:
+            return f"{self.resource_type}/{self.project}.yaml"
+        else:
+            return f"{self.provider}/{self.resource_type}/{self.project}.yaml"
 
     def get_commit_message(self) -> str:
         """
