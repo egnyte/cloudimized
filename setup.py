@@ -38,6 +38,7 @@ setup(
     extras_require={
         "test": [
             'mock',
+            'time_machine',
         ],
     },
     entry_points={
