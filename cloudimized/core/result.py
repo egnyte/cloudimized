@@ -121,7 +121,7 @@ class QueryResult:
             for resource_name, targets_id in self.resources[provider].items():
                 target_id_key = TARGET_ID_KEY[provider]
                 fieldnames = [target_id_key] + sorted(list(fieldnames_map[provider][resource_name]))
-                filename = f"{directory}/{resource_name}.csv"
+                filename = f"{directory}/{provider}/{resource_name}.csv"
                 logger.info(f"Dumping results in {filename}")
                 try:
                     with open(filename, "w", newline="") as csvfile:

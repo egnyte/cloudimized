@@ -59,8 +59,16 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.repo.repo.git.add.side_effect = Exception("test_error")
         with self.assertRaises(ChangeProcessorError) as cm:
             self.processor.process([test_git_change1], None)
-        self.assertEqual("Issue adding file 'test_resource1/test_project1.yaml' in Git", str(cm.exception))
+        self.assertEqual("Issue adding file 'azure/test_resource1/test_project1.yaml' in Git", str(cm.exception))
         self.processor.repo.repo.remotes.origin.push.assert_not_called()
+
+    def test_process_add_error_gcp(self):
+        self.processor.repo.repo.git.add.side_effect = Exception("test_error")
+        with self.assertRaises(ChangeProcessorError) as cm:
+            self.processor.process([test_git_change2], None)
+        self.assertEqual("Issue adding file 'gcp/test_resource1/test_project1.yaml' in Git", str(cm.exception))
+        self.processor.repo.repo.remotes.origin.push.assert_not_called()
+
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
     @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
@@ -73,45 +81,89 @@ class ChangeProcessorTestCase(unittest.TestCase):
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
     @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
-    def test_process_empty_repo_case(self, mock_getchangelogs):
+    def test_process_empty_repo_case_gcp(self, mock_getchangelogs):
+        self.processor.repo.repo.index.diff.side_effect = Exception("test issue")
+        self.processor.repo.repo.iter_commits.side_effect = Exception("test issue #2")
+        self.processor.repo.repo.git.rev_list.return_value = 1
+
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n Unable to identify changer"
+        self.assertEqual(expected_message,
+                         test_git_change2.message)
+        mock_getchangelogs.assert_called_once()
+        self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
+        self.processor.repo.repo.remotes.origin.push.assert_called_once()
+
+    @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
+    def test_process_empty_repo_case_azure(self, mock_getchangelogs):
         self.processor.repo.repo.index.diff.side_effect = Exception("test issue")
         self.processor.repo.repo.iter_commits.side_effect = Exception("test issue #2")
         self.processor.repo.repo.git.rev_list.return_value = 1
 
         self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n Unable to identify changer"
+        expected_message = "Test_Resource1 updated in AZURE: test_project1"
         self.assertEqual(expected_message,
                          test_git_change1.message)
+        assert not mock_getchangelogs.called
+        self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
+        self.processor.repo.repo.remotes.origin.push.assert_called_once()
+
+    @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
+    def test_process_empty_repo_case_with_commit_count_error_gcp(self, mock_getchangelogs):
+        self.processor.repo.repo.index.diff.side_effect = Exception("test issue")
+        self.processor.repo.repo.iter_commits.side_effect = Exception("test issue #2")
+        self.processor.repo.repo.git.rev_list.side_effect = Exception("test issue #3")
+
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n Unable to identify changer"
+        self.assertEqual(expected_message,
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
     @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
-    def test_process_empty_repo_case_with_commit_count_error(self, mock_getchangelogs):
+    def test_process_empty_repo_case_with_commit_count_error_azure(self, mock_getchangelogs):
         self.processor.repo.repo.index.diff.side_effect = Exception("test issue")
         self.processor.repo.repo.iter_commits.side_effect = Exception("test issue #2")
         self.processor.repo.repo.git.rev_list.side_effect = Exception("test issue #3")
 
         self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n Unable to identify changer"
+        expected_message = "Test_Resource1 updated in AZURE: test_project1"
         self.assertEqual(expected_message,
                          test_git_change1.message)
+        assert not mock_getchangelogs.called
+        self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
+        self.processor.repo.repo.remotes.origin.push.assert_called_once()
+
+    @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
+    def test_process_getchangelogs_error_gcp(self, mock_getchangelogs):
+        mock_getchangelogs.side_effect = Exception("test error")
+        self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
+
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n Unable to identify changer"
+        self.assertEqual(expected_message,
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
     @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
-    def test_process_getchangelogs_error(self, mock_getchangelogs):
+    def test_process_getchangelogs_error_azure(self, mock_getchangelogs):
         mock_getchangelogs.side_effect = Exception("test error")
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
 
         self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n Unable to identify changer"
+        expected_message = "Test_Resource1 updated in AZURE: test_project1"
         self.assertEqual(expected_message,
                          test_git_change1.message)
-        mock_getchangelogs.assert_called_once()
+        assert not mock_getchangelogs.called
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
@@ -120,9 +172,9 @@ class ChangeProcessorTestCase(unittest.TestCase):
     def test_process_no_gcp_logs_found(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         mock_getchangelogs.return_value = []
-        self.processor.process([test_git_change1], None)
-        self.assertEqual("Test_Resource1 updated in test_project1\n Unable to identify changer",
-                         test_git_change1.message)
+        self.processor.process([test_git_change2], None)
+        self.assertEqual("Test_Resource1 updated in GCP: test_project1\n Unable to identify changer",
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
@@ -134,10 +186,10 @@ class ChangeProcessorTestCase(unittest.TestCase):
         type(gcp_change_log_mock1).changer = mock.PropertyMock(return_value=None)
         mock_getchangelogs.return_value = [gcp_change_log_mock1]
 
-        self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n Unable to identify changer"
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n Unable to identify changer"
         self.assertEqual(expected_message,
-                         test_git_change1.message)
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
@@ -150,10 +202,10 @@ class ChangeProcessorTestCase(unittest.TestCase):
         type(gcp_change_log_mock1).changer = mock.PropertyMock(return_value=1)
         mock_getchangelogs.return_value = [gcp_change_log_mock1]
 
-        self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n Change done by unknown user '1'"
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n Change done by unknown user '1'"
         self.assertEqual(expected_message,
-                         test_git_change1.message)
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
@@ -166,10 +218,10 @@ class ChangeProcessorTestCase(unittest.TestCase):
         type(gcp_change_log_mock1).changer = mock.PropertyMock(return_value=test_manual_changer)
         mock_getchangelogs.return_value = [gcp_change_log_mock1]
 
-        self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n MANUAL change done by test_user"
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n MANUAL change done by test_user"
         self.assertEqual(expected_message,
-                         test_git_change1.message)
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
@@ -184,17 +236,35 @@ class ChangeProcessorTestCase(unittest.TestCase):
         type(gcp_change_log_mock2).changer = mock.PropertyMock(return_value=test_manual_changer)
         mock_getchangelogs.return_value = [gcp_change_log_mock1, gcp_change_log_mock2]
 
-        self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n MANUAL change done by test_user"
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n MANUAL change done by test_user"
         self.assertEqual(expected_message,
-                         test_git_change1.message)
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.repo.repo.git.commit.assert_called_once_with(m=expected_message)
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
     @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
     @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
-    def test_process_get_runs_error(self, mock_getchangelogs):
+    def test_process_get_runs_error_gcp(self, mock_getchangelogs):
+        self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
+        gcp_change_log_mock1 = mock.MagicMock(spec=GcpChangeLog)
+        type(gcp_change_log_mock1).changer = mock.PropertyMock(return_value=test_terraform_service_account)
+        mock_getchangelogs.return_value = [gcp_change_log_mock1]
+        self.processor.tf_query.get_runs.side_effect = TFQueryError("test error")
+
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n Terraform change done by test-terraform_workspace"
+        self.assertEqual(expected_message,
+                         test_git_change2.message)
+        mock_getchangelogs.assert_called_once()
+        self.processor.tf_query.get_runs.assert_called_once_with(gcp_sa="test-terraform_workspace")
+        self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
+        self.processor.repo.repo.remotes.origin.push.assert_called_once()
+
+    @time_machine.travel(dt.datetime(1985, 10, 26, 1, 24))
+    @mock.patch("cloudimized.core.changeprocessor.getChangeLogs")
+    def test_process_get_runs_error_azure(self, mock_getchangelogs):
         self.processor.repo.repo.iter_commits.return_value = ["test_commit_hash"]
         gcp_change_log_mock1 = mock.MagicMock(spec=GcpChangeLog)
         type(gcp_change_log_mock1).changer = mock.PropertyMock(return_value=test_terraform_service_account)
@@ -202,11 +272,11 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.tf_query.get_runs.side_effect = TFQueryError("test error")
 
         self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n Terraform change done by test-terraform_workspace"
+        expected_message = "Test_Resource1 updated in AZURE: test_project1"
         self.assertEqual(expected_message,
                          test_git_change1.message)
-        mock_getchangelogs.assert_called_once()
-        self.processor.tf_query.get_runs.assert_called_once_with(gcp_sa="test-terraform_workspace")
+        assert not mock_getchangelogs.called
+        assert not self.processor.tf_query.get_runs.called
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
         self.processor.repo.repo.remotes.origin.push.assert_called_once()
 
@@ -221,13 +291,13 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.tf_query.get_runs.return_value = self.test_tfruns
         type(self.processor.tf_query).tf_url = mock.PropertyMock(return_value="https://test_terraform.com")
 
-        self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n" \
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n" \
                            " Terraform change done by test-terraform_workspace\n" \
                            " Related TF run " \
                            "https://test_terraform.com/app/test_org/workspaces/test_workspace/runs/test0123456789"
         self.assertEqual(expected_message,
-                         test_git_change1.message)
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.tf_query.get_runs.assert_called_once_with(gcp_sa="test-terraform_workspace")
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
@@ -245,13 +315,13 @@ class ChangeProcessorTestCase(unittest.TestCase):
         type(self.processor.tf_query).tf_url = mock.PropertyMock(return_value="https://test_terraform.com")
         mock_re.search.return_value = "invalid value"
 
-        self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n" \
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n" \
                            " Terraform change done by test-terraform_workspace\n" \
                            " Related TF run " \
                            "https://test_terraform.com/app/test_org/workspaces/test_workspace/runs/test0123456789"
         self.assertEqual(expected_message,
-                         test_git_change1.message)
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.tf_query.get_runs.assert_called_once_with(gcp_sa="test-terraform_workspace")
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
@@ -267,14 +337,14 @@ class ChangeProcessorTestCase(unittest.TestCase):
         self.processor.tf_query.get_runs.return_value = self.test_tfruns
         type(self.processor.tf_query).tf_url = mock.PropertyMock(return_value="https://test_terraform.com")
 
-        self.processor.process([test_git_change1], None)
-        expected_message = "Test_Resource1 updated in test_project1\n" \
+        self.processor.process([test_git_change2], None)
+        expected_message = "Test_Resource1 updated in GCP: test_project1\n" \
                            " Terraform change done by test-terraform_workspace\n" \
                            " Related TF run " \
                            "https://test_terraform.com/app/test_org/workspaces/test_workspace/runs/test0123456789\n" \
                            " Related ticket https://test.ticketing.system/browse/TEST-1234"
         self.assertEqual(expected_message,
-                         test_git_change1.message)
+                         test_git_change2.message)
         mock_getchangelogs.assert_called_once()
         self.processor.tf_query.get_runs.assert_called_once_with(gcp_sa="test-terraform_workspace")
         self.processor.repo.repo.git.commit.assert_called_with(m=expected_message)
@@ -431,7 +501,9 @@ test_gcp_type_queries_map = {
 test_service_account_regex = '^test-terraform_.*'
 test_ticket_regex = '^.*?(TEST[-_][0-9]+).*'
 
-test_git_change1 = GitChange(resource_type="test_resource1", project="test_project1")
+test_git_change1 = GitChange(provider="azure", resource_type="test_resource1", project="test_project1")
+test_git_change2 = GitChange(provider="gcp", resource_type="test_resource1", project="test_project1")
+test_git_change_unknownProvider = GitChange(provider="unknown", resource_type="test_resource1", project="test_project1")
 
 test_manual_changer = "test_user@example.com"
 test_terraform_service_account = "test-terraform_workspace@example.com"

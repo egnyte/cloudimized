@@ -17,7 +17,8 @@ class JiraNotifierTestCase(unittest.TestCase):
                                          issuetype="test_type",
                                          filter_set=None,
                                          **kwargs)
-        self.gitchange = GitChange(resource_type="test_resource",
+        self.gitchange = GitChange(provider="azure",
+                                   resource_type="test_resource",
                                    project="test_project")
         self.gitchange.diff = "TEST_CHANGE_DIFF"
         self.gitchange.changers = ["test_changer"]

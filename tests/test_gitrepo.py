@@ -88,14 +88,14 @@ class GitRepoCase(unittest.TestCase):
         repo_mock.git.add.side_effect = Exception()
         self.gitrepo.repo = repo_mock
         with self.assertRaises(GitRepoError) as cm:
-            self.gitrepo.commit_change(GitChange(resource_type="test_resource", project="test_project"), "test_message")
+            self.gitrepo.commit_change(GitChange(provider="azure", resource_type="test_resource", project="test_project"), "test_message")
         self.assertEqual("Issue commiting change for project 'test_project' type 'test_resource'", str(cm.exception))
 
     def test_commit_change_success(self):
         repo_mock = mock.MagicMock()
         self.gitrepo.repo = repo_mock
-        self.gitrepo.commit_change(GitChange(resource_type="test_resource", project="test_project"), "test_message")
-        repo_mock.git.add.assert_called_with("test_resource/test_project.yaml")
+        self.gitrepo.commit_change(GitChange(provider="gcp", resource_type="test_resource", project="test_project"), "test_message")
+        repo_mock.git.add.assert_called_with("gcp/test_resource/test_project.yaml")
         repo_mock.git.commit.assert_called_with("test_message")
 
     def test_push_changes_issue(self):
@@ -110,7 +110,7 @@ class GitRepoCase(unittest.TestCase):
         repo_mock = mock.MagicMock()
         self.gitrepo.repo = repo_mock
         self.gitrepo.push_changes()
-        repo_mock.remotes.origin.push.called_once()
+        repo_mock.remotes.origin.push.assert_called_once()
 
     @mock.patch("cloudimized.gitcore.repo.GitRepo", spec=GitRepo)
     def test_configure_repo(self, mock_gitrepo):
