@@ -16,6 +16,7 @@ from cloudimized.core.slacknotifier import SLACK_TOKEN
 from cloudimized.azurecore.azurecredential import get_azure_credential
 from cloudimized.azurecore.azurequery import AZURE_QUERIES_SECTION, configure_azure_queries, AzureQuery, \
     AzureQueryArgumentError, AzureQueryError
+from cloudimized.azurecore.resourcegroupsquery import RESOURCE_GROUPS_RESOURCE_NAME
 from cloudimized.azurecore.subscriptionsquery import SUBSCRIPTIONS_RESOURCE_NAME
 from cloudimized.gcpcore.gcpquery import RESOURCE, GCP_API_CALL, RESULT_ITEMS_FIELD, ITEM_EXCLUDE_FILTER, \
     GCP_LOG_RESOURCE_TYPE
@@ -311,17 +312,30 @@ class Cloudimizer:
         logger.info(f"Discovered {len(result)} projects")
 
     #For Azure subscriptions discovery
-    def discover_azure_subscriptions(self) -> None:
+    def discover_azure(self) -> None:
         """
         Performs discovery of all available subscriptions IDs
         """
+        self.subscriptions = {}
         logger.info(f"Performing Azure subscriptions discovery")
-        query = AzureQuery.create(resource_name=SUBSCRIPTIONS_RESOURCE_NAME)
         credentials = get_azure_credential()
-        raw_result = query.execute(credentials, None)
-        result = [subscription['subscription_id'] for subscription in raw_result]
-        self.subscriptions = result
-        logger.info(f"Discovered {len(result)} Azure subscriptions")
+        query = AzureQuery.create(resource_name=SUBSCRIPTIONS_RESOURCE_NAME)
+        raw_result = query.execute(credentials=credentials,
+                                   subscription_id=None,
+                                   resource_groups=None)
+        subscription_ids = [subscription['subscription_id'] for subscription in raw_result]
+        logger.info(f"Discovered {len(subscription_ids)} Azure subscriptions. Discovering resource groups")
+        query = AzureQuery.create(resource_name=RESOURCE_GROUPS_RESOURCE_NAME)
+        for sub_id in subscription_ids:
+            raw_result = query.execute(credentials=credentials,
+                                       subscription_id=sub_id,
+                                       resource_groups=None)
+            resource_groups = [resource_group['name'] for resource_group in raw_result]
+            #Add only non-empty subscriptions
+            logger.info(f"Discovered {len(resource_groups)} ResourceGroups in Subscription {sub_id}")
+            if resource_groups:
+                self.subscriptions[sub_id] = resource_groups
+
 
     def run_queries(self) -> None:
         """
@@ -364,8 +378,8 @@ class Cloudimizer:
             for resource_name, query in self.azure_queries.items():
                 logger.info(f"Querying configuration for resource '{resource_name}'")
                 futures = []
-                for subscription_id in self.subscriptions:
-                    future = executor.submit(query_azure_task, query.execute, subscription_id, local)
+                for subscription_id, resource_groups in self.subscriptions.items():
+                    future = executor.submit(query_azure_task, query.execute, subscription_id, resource_groups, local)
                     future.subscription_id = subscription_id
                     futures.append(future)
                 for future in as_completed(futures):
@@ -395,7 +409,7 @@ class Cloudimizer:
         elif self.arg_provider == "azure":
             #Discover all subscriptions
             try:
-                self.discover_azure_subscriptions()
+                self.discover_azure()
             except Exception as e:
                 logger.critical(f"Issue during subscriptions discovery\n{e}\n{e.__cause__}")
                 sys.exit(1)
@@ -424,7 +438,7 @@ class Cloudimizer:
         # Azure
         if self.do_subscription_discovery:
             try:
-                self.discover_azure_subscriptions()
+                self.discover_azure()
             except Exception as e:
                 logger.critical(f"Issue during Azure subscriptions discovery\n{e}\n{e.__cause__}")
                 sys.exit(1)
@@ -500,14 +514,15 @@ def query_task(query_function, project_id, local):
     return query_function(local.service, project_id)
 
 
-def query_azure_task(query_function, subscription_id, local):
+def query_azure_task(query_function, subscription_id, resource_groups, local):
     """
     Wrapper for query function for multithreading
     :param query_function: query execute function
     :param subscription_id: Azure subscription ID to scan
+    :param resource_groups: list of Azure Resource Groups in given subscription
     :param local: thread local variable
     """
-    return query_function(local.credential, subscription_id)
+    return query_function(local.credential, subscription_id, resource_groups)
 
 
 def execute():

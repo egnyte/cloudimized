@@ -68,15 +68,20 @@ class AzureQuery(ABC):
             raise ValueError(f"Class '{resource_name}' is not registered")
         return cls._registry[resource_name](resource_name, *args, **kwargs)
 
-    def execute(self, credentials: DefaultAzureCredential, subscription_id: str) -> List[Dict]:
+    def execute(self,
+                credentials: DefaultAzureCredential,
+                subscription_id: str,
+                resource_groups: List[str]) -> List[Dict]:
         """
         Sends Azure query that lists virtualProjects in subscription in project.
+        :param credentials: Azure credential object
         :param subscription_id: Azure subscription ID to query
+        :param resource_groups: list of Rescource Group names
         :return: List of resources that were queried
         """
         logger.info(f"Running query for '{self.resource_name}' in subscription '{subscription_id}'")
         try:
-            raw_result = self.__send_query(credentials, subscription_id)
+            raw_result = self.__send_query(credentials, subscription_id, resource_groups)
         except Exception as e:
             raise AzureQueryError(f"Issue executing call '{self.resource_name}'") from e
         try:
