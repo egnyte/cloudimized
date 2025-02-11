@@ -1,25 +1,26 @@
 import logging
 import unittest
 import mock
-from cloudimized.azurecore.azurequery import AzureQuery, AzureQueryError, AzureQueryArgumentError
-from cloudimized.azurecore.virtualnetworksquery import VirtualNetworksQuery
+from cloudimized.azurecore.azurequery import AzureQueryError
+from cloudimized.azurecore.vnetgatewaysquery import VnetGatewaysQuery
 
-class AzureQueryTestCase(unittest.TestCase):
+class AzureVnetGatewaysQueryTestCase(unittest.TestCase):
     def setUp(self) -> None:
-        self.patcher = mock.patch("cloudimized.azurecore.virtualnetworksquery.NetworkManagementClient")
+        self.patcher = mock.patch("cloudimized.azurecore.vnetgatewaysquery.NetworkManagementClient")
         self.mock_client = self.patcher.start()
 
         logging.disable(logging.WARNING)
-        self.query = VirtualNetworksQuery(
+        self.query = VnetGatewaysQuery(
             resource_name="test_name"
         )
         mock_result_1 = mock.MagicMock()
         mock_result_2 = mock.MagicMock()
         mock_result_1.as_dict.return_value = result_resource_1
         mock_result_2.as_dict.return_value = result_resource_2
-        mock_raw_result = mock.MagicMock()
-        mock_raw_result.__iter__.return_value = iter([mock_result_2, mock_result_1]) #Reverse order to check sorting
-        self.mock_client.return_value.virtual_networks.list_all.return_value = mock_raw_result
+        self.mock_client.return_value.virtual_network_gateways.list.side_effect = [
+            iter([mock_result_2]),
+            iter([mock_result_1])
+        ]
 
     def tearDown(self) -> None:
         logging.disable(logging.NOTSET)
@@ -30,10 +31,17 @@ class AzureQueryTestCase(unittest.TestCase):
         pass
 
     def testExecute(self):
-        result = self.query.execute(credentials="test_creds", subscription_id="test_subs_id")
+        result = self.query.execute(credentials="test_creds",
+                                    subscription_id="test_subs_id",
+                                    resource_groups=["test_rg_1", "test_rg_2"])
 
-        self.mock_client.assert_called_with(credential="test_creds", subscription_id="test_subs_id")
-        self.mock_client.return_value.virtual_networks.list_all.assert_called_with()
+        self.mock_client.assert_called_with(credential="test_creds",
+                                            subscription_id="test_subs_id")
+        api_calls = [
+            mock.call(resource_group_name="test_rg_1"),
+            mock.call(resource_group_name="test_rg_2")
+        ]
+        self.mock_client.return_value.virtual_network_gateways.list.assert_has_calls(api_calls)
 
         self.assertIsInstance(result, list)
         self.assertListEqual(result, query_result_expected)
@@ -41,13 +49,17 @@ class AzureQueryTestCase(unittest.TestCase):
     def testExecute_query_fail(self):
         self.mock_client.return_value.virtual_networks.list_all.side_effect = Exception("test")
         with self.assertRaises(AzureQueryError):
-            self.query.execute(credentials="test_creds", subscription_id="test_subs_id")
+            self.query.execute(credentials="test_creds",
+                               subscription_id="test_subs_id",
+                               resource_groups=None)
 
     def testExecute_serializing_fail(self):
         mock_raw_result = self.mock_client.return_value.virtual_networks.list_all.return_value
         mock_raw_result.__iter__.side_effect = Exception("test")
         with self.assertRaises(AzureQueryError):
-            self.query.execute(credentials="test_creds", subscription_id="test_subs_id")
+            self.query.execute(credentials="test_creds",
+                               subscription_id="test_subs_id",
+                               resource_groups=None)
         self.mock_client.assert_called_with(credential="test_creds", subscription_id="test_subs_id")
 
 if __name__ == '__main__':
