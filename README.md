@@ -1,7 +1,8 @@
 # Cloudimized
 
-Cloudimized is a Google Cloud Platform (GCP) configuration scanning tool. It allows
-monitoring changes of selected resources.
+Cloudimized is a Cloud Provider configuration scanning tool. It allows
+monitoring changes of selected resources. Currently supports Google Cloud Platform (GCP) and 
+Microsoft Azure.
 
 Cloudimized performs similar function as Oxidized, but for Cloud environment.
 
@@ -9,7 +10,7 @@ Cloudimized performs similar function as Oxidized, but for Cloud environment.
 
 ## Overview
 
-Cloudimized periodical scans of GCP resources via API calls and dumps them into yaml files. Files are tracked in Git,
+Cloudimized periodical scans of resources via API calls and dumps them into yaml files. Files are tracked in Git,
 so every configuration change is being tracked.
 It gathers additional information for each change: changer's identity, related Terraform runs
 (optionally), identify change ticket number (optionally).
@@ -17,9 +18,9 @@ Optionally it sends Slack notifications for each change.
 
 ## Features
 
-* Project discovery across GCP organization
-* Identifying changer identity
-* Manual changes detection
+* Project discovery across GCP organization / Subscription & ResourceGroups discovery in Azure Tenant
+* Identifying changer identity (only GCP)
+* Manual changes detection (only GCP)
 * Identifying Terraform runs
 * Identifying change tickets
 * Slack notifications
@@ -38,8 +39,8 @@ On each execution Cloudimized performs following actions:
 4. Dumps all results in yaml files format in local Git repo
 5. Checks local Git repo state and detects all changed resource
 6. For each detected change performs additional information gathering:
-   1. Get GCP Logs for change to identify changer's identity
-   2. Identifies manual changes
+   1. Get GCP Logs for change to identify changer's identity (only GCP)
+   2. Identifies manual changes (only GCP)
       1. *changes performed directly by individual users as opposed to service accounts i.e. changes done outside of Terraform*
    3. (optional) If change performed via Terraform Service Account, identify related Terraform runs.
       1. Get Terraform Runs URL
@@ -59,7 +60,7 @@ On each execution Cloudimized performs following actions:
 pipx install cloudimized
 ```
 
-2. Cloudimized for operation requires Git repo for storing GCP configuration files.
+2. Cloudimized for operation requires Git repo for storing cloud's configuration files.
    1. Set-up empty Git repo in remote location i.e. GitHub or GitLab
 
 ## Running
@@ -95,9 +96,12 @@ selected Folders and/or Projects.
 See:
 * [Google Cloud listing permissions](https://cloud.google.com/resource-manager/docs/listing-all-resources)
 
-#### Azure Applicaton (optional)
+#### Azure servie accounts
 
-#TODO
+Authentication to Azure is done using [Azure DefaultAzureCredentials class](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python),
+for exact capabilities how authentication can be done view [official docs](https://learn.microsoft.com/en-us/azure/developer/python/sdk/authentication/credential-chains?tabs=dac#defaultazurecredential-overview).
+
+Additionally, authentication using GCP Service Account via [Workfload Identity Federation is supported](#azure-secrets)
 
 #### GIT Service Account
 
@@ -214,6 +218,17 @@ following env var need to be set ([see docs](https://learn.microsoft.com/en-us/e
 
 Example configuration file:
 ```YAML
+# Configuration queries for Azure resources
+azure_queries:
+     # Type of Azure's resource to query - registration name of AzureQuery class
+     # Currently supported queries: resourceGroups, subscriptions, virtualNetworks, vnetGateways
+   - resource: virtualNetworks
+      # List of fields to exclude from configuration i.e. for status related fields
+     field_exclude_filter:
+        - etag
+        - subnets:
+             - etag
+# Configuration queries for GCP resources
 gcp_services:
   # GCP API Service name - https://cloud.google.com/compute/docs/reference/rest/v1#service:-compute.googleapis.com
   - serviceName: compute
