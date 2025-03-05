@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0
+
+* Add support for Azure cloud
+
 ## 1.3.11
 
 * Update Jira notifier with token authentication
@@ -48,7 +52,7 @@
 
 ## 1.2.1
 
-* Add support for nested results for CSV output 
+* Add support for nested results for CSV output
 
 ## 1.2.0
 

@@ -11,8 +11,8 @@ with open('requirements.txt') as f:
 
 setup(
     name="cloudimized",
-    version="1.3.11",
-    description='Google Cloud Platform (GCP) configuration scanning tool',
+    version="2.0.0",
+    description='GCP & Azure configuration scanning tool',
     long_description=readme,
     long_description_content_type="text/markdown",
     url="https://github.com/egnyte/cloudimized",

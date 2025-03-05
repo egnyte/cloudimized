@@ -1,7 +1,7 @@
 # Cloudimized
 
 Cloudimized is a Cloud Provider configuration scanning tool. It allows
-monitoring changes of selected resources. Currently supports Google Cloud Platform (GCP) and 
+monitoring changes of selected resources. Supports Google Cloud Platform (GCP) and
 Microsoft Azure.
 
 Cloudimized performs similar function as Oxidized, but for Cloud environment.
