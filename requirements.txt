@@ -1,6 +1,7 @@
 azure-common==1.1.28
 azure-core==1.32.0
 azure-identity==1.19.0
+azure-mgmt-containerservice==34.2.0
 azure-mgmt-core==1.5.0
 azure-mgmt-network==28.1.0
 azure-mgmt-resource==23.2.0

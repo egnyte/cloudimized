@@ -1,0 +1,9 @@
+resource: aksClusters
+field_exclude_filter:
+  - agent_pool_profiles:
+      - power_state
+      - provisioning_state
+  - power_state
+  - provisioning_state
+#item_exclude_filter:
+#  -
