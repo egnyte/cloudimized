@@ -1,0 +1,12 @@
+resource: networkSecurityGroups
+field_exclude_filter:
+  - default_security_rules:
+      - etag
+      - provisioning_state
+  - etag
+  - provisioning_state
+  - security_rules:
+      - etag
+      - provisioning_state
+#item_exclude_filter:
+#  -
