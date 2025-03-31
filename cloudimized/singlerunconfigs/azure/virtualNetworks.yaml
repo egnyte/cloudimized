@@ -3,8 +3,13 @@ field_exclude_filter:
   - etag
   - provisioning_state
   - subnets:
+      - delegations:
+          - etag
       - etag
+      - ip_configurations
       - provisioning_state
+      - service_association_links:
+          - etag
   - virtual_network_peerings:
       - etag
       - peering_state

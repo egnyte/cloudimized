@@ -4,6 +4,7 @@ field_exclude_filter:
       - etag
       - provisioning_state
   - etag
+  - network_interfaces
   - provisioning_state
   - security_rules:
       - etag
