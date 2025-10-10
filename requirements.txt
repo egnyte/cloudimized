@@ -60,6 +60,6 @@ smmap==5.0.2
 terrasnek==0.1.14
 typing_extensions==4.12.2
 uritemplate==4.1.1
-urllib3==2.3.0
+urllib3==2.5.0
 wrapt==1.17.0
 zipp==3.21.0
