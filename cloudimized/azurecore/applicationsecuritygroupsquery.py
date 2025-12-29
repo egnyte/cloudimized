@@ -1,5 +1,5 @@
 """
-Azure query for Network Security Group
+Azure query for Application Security Groups
 """
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.network import NetworkManagementClient
