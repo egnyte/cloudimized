@@ -1,0 +1,6 @@
+resource: applicationSecurityGroups
+field_exclude_filter:
+  - etag
+  - provisioning_state
+#item_exclude_filter:
+#  -
