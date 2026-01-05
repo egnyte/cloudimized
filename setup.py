@@ -11,7 +11,7 @@ with open('requirements.txt') as f:
 
 setup(
     name="cloudimized",
-    version="2.0.2",
+    version="2.0.3",
     description='GCP & Azure configuration scanning tool',
     long_description=readme,
     long_description_content_type="text/markdown",

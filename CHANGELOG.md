@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.3
+
+* Add support for Azure calls: applicationSecurityGroups & networkInterfaces
+* Upgrade dependencies
+
 ## 2.0.2
 
 * Upgrade dependencies
