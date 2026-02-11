@@ -39,7 +39,7 @@ msrest==0.7.1
 oauthlib==3.2.2
 opentelemetry-api==1.29.0
 packaging==24.2
-pillow==11.1.0
+pillow==12.1.1
 pip-install==1.3.5
 portalocker==2.10.1
 proto-plus==1.25.0
